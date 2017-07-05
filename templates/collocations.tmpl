@@ -1,0 +1,109 @@
+#import string
+<html>
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <title>Displaying entry $word</title>
+  <style>
+  body { direction: rtl; margin: 0px; width: 100%; font-size: 30px}
+  input { font-size: 22px ; border: 0px; border-bottom: 1px solid white; background: black; color: white}
+  div.header {width: 100%; color: white; background: black;
+               font-size: 22px; }
+  div.content { padding: 20px; font-size: 20px; line-height: 30px;  }
+
+  a:link, a:visited {text-decoration: none; color: black}
+  a:hover {text-decoration: underline}
+
+  div.block { width: 300px; float: right; padding: 10px;
+              border: 1px solid black; margin: 20px}
+
+  div.msg { color: grey; text-align: center; margin-top: 100px; font-size: 50px; line-height:	80px}
+  h1, div.derived_nouns, span.verbstem, span.verbstem_no, a:link, a:visited { color: #993366 }
+  h1 { font-size: 23px; margin-bottom: 0px; margin-top: 10px; padding-bottom: 10px; border-bottom: 1px solid black}
+  h2 { font-size: 20px; margin-bottom: 0px; margin-top: 20px;}
+
+  div.verbstem_block { line-height: 30px; margin-top: 10px; margin-bottom: 10px	}
+  span.verbstem_no { }
+  span.verbstem { font-weight: bold; color: white }
+
+  div.derivation_source { margin-top: 0px; font-size: 15px}
+  div.derived_nouns {margin-top: 10px}
+  div.translations { margin-top: 10px}
+  span.translations { }
+
+  div.external_data {margin-top: 10px}
+  div.external_data a:link, div.external_data a:visited {color: grey}
+  div.provider_name {margin-top: 0px; margin-bottom: 0px; font-size:16px}
+  div.provider_content {margin-top: 0px; margin-bottom: 5px; }
+	
+  form { padding: 10px}
+  div.credit { position: fixed; bottom: 10; left: 10;	font-size: 20px }
+  div.credit a {color: grey}
+
+  ul {margin-top: 5px}
+  li {margin-top: 5px}
+  
+  table.collocations {width: 100%; font-size: 20px}
+  table.collocations td.meta { color: grey}
+
+
+  #title 
+  {
+    margin-right: 10px;
+    color: white;
+
+    position: absolute;
+    left:20px;
+    top:10px;
+    height: 50px;
+  }
+  #title a { color: white; }
+  </style>
+</head>
+
+<body>
+<div class = "header">
+
+<div id="title">
+
+
+</div>
+
+<form action="show">
+   البحث عن
+  <input type="text" name="w" value="$word">
+  <input type="submit" value="go">
+</form>
+</div>
+
+<div class="content">
+
+#for $pattern in $collocations:
+  <div class="block">
+  <h1> $pattern </h1>
+  <p>
+  <table class="collocations">
+  #set $sorted_collocations = $sorted($collocations[$pattern], key=lambda x: -x[1])[:20]
+  #for ($collocator, $score, $count) in $sorted_collocations:
+  <tr>
+  	<td>
+  	  <a href=show?w=$collocator>$collocator</a>
+  	</td>
+  	<td class="meta">
+  	  #echo "%.1f" % $score
+  	</td>
+  	<td class="meta">$count</td>
+  </tr>
+  #end for
+  </table>
+  </p>
+  </div>
+#end for
+</div>
+
+<div class="credit">
+<a href="https://github.com/mirko-vogel/shabaka/wiki">shabaka on github</a>
+</div>
+
+</body>
+</html>
+

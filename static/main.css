@@ -1,0 +1,119 @@
+*
+{
+    margin:0;padding:0;
+}
+
+body
+{
+    height: 100%;
+    width: 100%;
+    margin: 0px;
+}
+
+/* Header */
+
+#header
+{
+    height: 50px;
+    width: 100%;
+    background: grey;
+    font-size: 20;
+    line-height: 50px;
+    text-align: right;
+    direction: rtl;
+    color: #4D4D4D;
+}
+
+#title 
+{
+    font-family: monospace;
+    margin-right: 10px;
+
+    position: absolute;
+    left:200px;
+    right:0;
+    top:0;
+    height: 50px;
+}
+
+
+#search 
+{
+    text-align: left;
+    width: 200px
+    height: 50px;
+    margin-left: 10px;
+}
+
+input 
+{
+    font-size: 20;
+}
+
+
+input[type=text]
+{
+    width: 140px;
+}
+
+input[type=submit]
+{
+    width: 60px;
+}
+
+/* Content container */
+
+#container
+{
+    position: absolute;
+    left:0;
+    width: 100%;
+    top:50px;
+    bottom: 0px;
+}
+
+.sideBar
+{
+    float:right;
+    width: 300px;
+    height: 100%;
+    background: black;
+    color: white;
+}
+
+.content
+{
+    overflow:hidden;
+    background: white; 
+    text-align: center;  
+    height: 100%;
+}
+
+.graph {
+    vertical-align: middle;
+}
+
+/* Side bar element formatting */
+
+.sbElementContainer {
+    margin: 15px;
+    text-align: right;
+    direction: rtl;
+}
+
+.citation_form {
+    line-height: 60px;
+    font-size: 30px;
+}
+
+.sbElementHeader {
+    border-top: 1px solid grey;
+    font-size: 14px;
+    color: grey;
+}
+
+.sbElementContent {
+    font-size: 15pt;
+}
+
+
