@@ -25,21 +25,28 @@ class CollocationExtractor():
                 % (self.wordcount, self.bigramcount)
             
         self.scored_bigrams = defaultdict(lambda : defaultdict(list))
+	self.collocation_count = 0
   
     def score(self):
         """ """
         score_fn = nltk.collocations.BigramAssocMeasures.pmi
         
         for (w1, w2), score in self.finder._score_ngrams(score_fn):
-            l1, t1 = w1.rsplit("/", 1)
-            l2, t2 = w2.rsplit("/", 1)
-            w1_pattern = "%s + %s" % (t1.lower(), t2)
-            w2_pattern = "%s + %s" % (t1, t2.lower())
-            count = self.finder.ngram_fd[(w1, w2)]
-            
-            #print "%s %s %s" % (a, b, score)
-            self.scored_bigrams[w1][w1_pattern].append((l2, score, count))
-            self.scored_bigrams[w2][w2_pattern].append((l1, score, count))
+            try:
+                l1, t1 = w1.rsplit("/", 1)
+                l2, t2 = w2.rsplit("/", 1)
+                w1_pattern = "%s + %s" % (t1.lower(), t2)
+                w2_pattern = "%s + %s" % (t1, t2.lower())
+                count = self.finder.ngram_fd[(w1, w2)]
+                
+                #print "%s %s %s" % (a, b, score)
+                self.scored_bigrams[w1][w1_pattern].append((l2, score, count))
+                self.scored_bigrams[w2][w2_pattern].append((l1, score, count))
+                self.collocation_count += 1
+            except:
+                pass
+
+	print "%s collocations extracted." % self.collocation_count
 
 
     def prettyprint(self, w, topn = 20):

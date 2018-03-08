@@ -44,7 +44,7 @@
   
   table.collocations {width: 100%; font-size: 20px}
   table.collocations td.meta { color: grey}
-
+  span.core_word { color: black; font-weight: normal }
 
   #title 
   {
@@ -76,10 +76,16 @@
 </div>
 
 <div class="content">
+#set patterns = [("V + noun", u"قعل + %s"), ("noun + V", u"%s + فعل"), ("v + NOUN", u"%s + اسم"), ("NOUN + v", u"اسم + %s"), ("NOUN + noun", u"اسم + %s"), ("noun + NOUN", u"%s + اسم"), ("NOUN + adj", u"اسم + %s"), ("noun + ADJ", u"%s + صفة") ]
 
-#for $pattern in $collocations:
+#for ($pattern, $pattern_name) in $patterns:
+  #if $len($collocations[$pattern]) == 0:
+    #continue
+  #end if
   <div class="block">
-  <h1> $pattern </h1>
+  <h1> 
+    #echo $pattern_name % ("<span class=core_word>" + $word + "</span>")
+  </h1>
   <p>
   <table class="collocations">
   #set $sorted_collocations = $sorted($collocations[$pattern], key=lambda x: -x[1])[:20]

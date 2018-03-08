@@ -1,0 +1,91 @@
+#import string
+<html>
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <title>Collocation Review</title>
+  <style>
+  body { direction: rtl; margin: 0px; width: 100%; font-size: 30px}
+  div.header {width: 100%; color: white; background: black; padding: 10px; position: fixed}
+
+  div.content {padding: 20px; padding-top: 70px; }
+
+  div.box { width: 350px; float: right; border: 1px solid black; margin: 20px}
+
+  div.box-title, div.box-content { margin: 0px; padding: 10px; }
+
+  div.box-title { border-bottom: 1px solid black; font-size: 23px; }
+  div.box-title.got-fb-useful { background-color: green ; font-weight: bold}
+  div.box-title.got-fb-correct { background-color: LightGreen ; font-weight: bold}
+  div.box-title.got-fb-wrong { background-color: DarkRed }
+
+  div.box-content { font-size: 15px; line-height: 25px; }
+  div.box-content.got-fb-correct { color: green }
+  div.box-content.got-fb-wrong { color: DarkRed }
+  
+  span.collocation { }  
+
+  span.example { }
+  span.collocation_word { font-weight: bold }
+
+  span.coll-fb-buttons { float:left;}
+  button { border: 0px; height: 30px; margin: 0px; background-color: transparent; }
+  button:hover { background-color: LightGrey }
+  button.fb-useful { color: green; }
+  button.fb-correct { color: LightGreen; }
+  button.fb-wrong { color: DarkRed; }  
+
+  </style>
+  
+  <script type="text/javascript">
+    function set_class(element_id, cls)
+    {
+        document.getElementById(element_id).className = cls;
+    }
+  </script>
+
+</head>
+
+<body>
+<div class="header">
+مُرَيجَع > تنقيح المتواردات اللفظية > صفات لاسم "اتفاقية"
+</div>
+
+<div class="content">
+<%
+def canonical_form(c):
+	for ic in c.forms:
+		if not ic.core_word.startswith(u"ال"):
+			return "%s %s" % (ic.core_word, ic.coll_word)
+	
+	return "%s %s" % (c.core_lemma, c.coll_lemma)
+%>
+
+#for ($n, $c) in $enumerate($colls):
+#if len($c.forms) == 0:
+	#continue
+#end if
+<div class="box">
+	<div class="box-title" id="coll-$n">
+		<span class="collocation"> 
+			$canonical_form($c)
+		</span>
+		<span class="coll-fb-buttons">
+			<button onclick="set_class('coll-$n', 'box-title got-fb-useful')" class="fb-useful">&#10004;&#10004</button>
+			<button onclick="set_class('coll-$n', 'box-title got-fb-correct')" class="fb-correct">&#10004;</button>
+			<button onclick="set_class('coll-$n', 'box-title got-fb-wrong')" class="fb-wrong">&#10008;</button>
+		</span>
+	</div>
+	<div class="box-content" id="ex-$n">
+		<span class="example">
+			$c.forms[0].examples[0].get_highlighted(u'<span class="collocation_word">%s</span>')
+			<button onclick="set_class('ex-$n', 'box-content got-fb-correct')" class="fb-correct">&#10004;</button>
+			<button onclick="set_class('ex-$n', 'box-content got-fb-wrong')" class="fb-wrong">&#10008;</button>
+		</span>
+	</div>
+</div>
+#end for
+</div>
+
+</body>
+</html>
+

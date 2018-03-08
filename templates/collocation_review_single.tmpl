@@ -1,0 +1,99 @@
+#import string
+<html>
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <title>Collocation Review</title>
+  <style>
+  body { direction: rtl; margin: 0px; width: 100%; font-size: 30px}
+  div.header {width: 100%; color: white; background: black;
+               font-size: 22px; }
+  
+  a:link, a:visited {text-decoration: none; color: black}
+  a:hover {text-decoration: underline}
+
+html, body, div.content {
+    height: 100%;
+}
+div.content {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+
+  div.block {
+    width: 600px;
+    height: 400px;
+    padding: 20px;
+    border: 1px solid black;
+    margin: 20px
+ }
+
+  div.msg { color: grey; text-align: center; margin-top: 100px; font-size: 50px; line-height:	80px}
+  h1, div.derived_nouns, span.verbstem, span.verbstem_no, a:link, a:visited { color: #993366 }
+  h1 { font-size: 43px; margin-bottom: 0px; margin-top: 10px; padding-bottom: 10px; border-bottom: 1px solid black}
+  h2 { font-size: 20px; margin-bottom: 0px; margin-top: 20px;}
+
+  form { padding: 10px}
+  div.credit { position: fixed; bottom: 10; left: 10;	font-size: 20px }
+  div.credit a {color: grey}
+
+  ul {margin-top: 5px}
+  li {margin-top: 5px}
+  
+  p.example { font-size: 25px; line-height: 150%;}
+  span.collocation_word { color: #993366 }
+
+  #title 
+  {
+    margin-right: 10px;
+    color: white;
+
+    position: absolute;
+    left:20px;
+    top:10px;
+    height: 50px;
+  }
+  #title a { color: white; }
+  </style>
+</head>
+
+<%
+def canonical_form(c):
+	for ic in c.forms:
+		if not ic.core_word.startswith(u"ال"):
+			return "%s %s" % (ic.core_word, ic.coll_word)
+	
+	return "%s %s" % (c.core_lemma, c.coll_lemma)
+%>
+
+
+<body>
+<div class = "header">
+<div id="title">
+</div>
+</div>
+
+<div class="content">
+
+#set $c=$colls[0]
+
+
+  <div class="block">
+  <h1> 
+    $canonical_form($c)
+  </h1>
+  <p class="example">
+  #try
+  	$c.forms[0].examples[0].get_highlighted(u'<span class="collocation_word">%s</span>')
+  #except IndexError
+  	#pass
+  #end try
+  </p>
+  </div>
+
+</div>
+
+</body>
+</html>
+
