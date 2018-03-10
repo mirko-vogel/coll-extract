@@ -50,37 +50,19 @@
 مُرَيجَع > تنقيح المتواردات اللفظية > صفات لاسم "اتفاقية"
 </div>
 
-<div class="content">
-<%
-def canonical_form(c):
-	for ic in c.forms:
-		if not ic.core_word.startswith(u"ال"):
-			return "%s %s" % (ic.core_word, ic.coll_word)
-	
-	return "%s %s" % (c.core_lemma, c.coll_lemma)
-%>
 
-#for ($n, $c) in $enumerate($colls):
-#if len($c.forms) == 0:
-	#continue
-#end if
+<div class="content">
+#for (($core_lemma, $core_pos), coll_pos_counts) in $cores.items:
 <div class="box">
-	<div class="box-title" id="coll-$n">
+	<div class="box-title">
 		<span class="collocation"> 
-			$canonical_form($c)
-		</span>
-		<span class="coll-fb-buttons">
-			<button onclick="set_class('coll-$n', 'box-title got-fb-useful')" class="fb-useful">&#10004;&#10004</button>
-			<button onclick="set_class('coll-$n', 'box-title got-fb-correct')" class="fb-correct">&#10004;</button>
-			<button onclick="set_class('coll-$n', 'box-title got-fb-wrong')" class="fb-wrong">&#10008;</button>
+			$core_lemma			
 		</span>
 	</div>
-	<div class="box-content" id="ex-$n">
-		<span class="example">
-			$c.forms[0].examples[0].get_highlighted(u'<span class="collocation_word">%s</span>')
-			<button onclick="set_class('ex-$n', 'box-content got-fb-correct')" class="fb-correct">&#10004;</button>
-			<button onclick="set_class('ex-$n', 'box-content got-fb-wrong')" class="fb-wrong">&#10008;</button>
-		</span>
+	<div class="box-content">
+	#for $pos in $coll_pos_counts:
+		<a href="candidates?core_lemma=$core_lemma&core_pos=$core_pos&coll_pos=$pos">$pos</a>
+	#end for
 	</div>
 </div>
 #end for

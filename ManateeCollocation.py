@@ -37,7 +37,6 @@ class Collocation(object):
     classdocs
     '''
 
-
     def __init__(self, core_lemma, core_pos, coll_lemma, coll_pos, freq, score):
         '''
         Constructor
@@ -47,7 +46,13 @@ class Collocation(object):
         self.freq = freq
         self.score = score
         self.forms = []
-        
+    
+    def as_json(self):
+        return { "core_lemma": self.core_lemma, "core_pos": self.core_pos,
+                 "coll_lemma": self.coll_lemma, "coll_pos": self.coll_pos,
+                 "freq": self.freq, "score": self.score, 
+                 "inflected_forms": { f.wordpos: f.as_json() for f in self.forms} }
+            
     def __unicode__(self):
         return u"(Collocation %s - %s)" % (self.core_lempos, self.coll_lempos)
     
@@ -110,6 +115,12 @@ class InflectedCollocation(object):
         self.freq = freq
         self.examples = []
     
+    def as_json(self):
+        e_dict = { e.ref: e.as_json() for e in self.examples }
+        return { "core_word": self.core_word, "core_pos": self.core_pos,
+                 "coll_word": self.coll_word, "coll_pos": self.coll_pos,
+                 "freq": self.freq, "examples": e_dict }
+    
     @property
     def core_wordpos(self):
         return u"%s+%s" % (self.core_word, self.core_pos)
@@ -117,6 +128,11 @@ class InflectedCollocation(object):
     @property
     def coll_wordpos(self):
         return u"%s+%s" % (self.coll_word, self.coll_pos)
+    
+    @property
+    def wordpos(self):
+        """ Returns the collocation as word-pos tokens """
+        return u"%s %s" % (self.core_wordpos, self.coll_wordpos)
     
     def __unicode__(self):
         return u"(InflectedCollocation %s - %s)" % (self.core_wordpos, self.coll_wordpos)
@@ -131,7 +147,7 @@ class InflectedCollocation(object):
         query = u'[lemma="%s" & pos="%s"][lemma="%s" & pos="%s"]' \
             % (c.core_lemma, c.core_pos, c.coll_lemma, c.coll_pos)
         
-        conc = manatee.Concordance(corp, query, 1000000, -1)
+        conc = manatee.Concordance(corpus, query, 1000000, -1)
         conc.sync()
         words = manatee.StrVector()
         freqs = manatee.NumVector()
@@ -139,7 +155,7 @@ class InflectedCollocation(object):
         
         # "word/e 0~0>0"
         crit = "word 0 word 1"
-        corp.freq_dist(conc.RS(), crit, min_freq, words, freqs, norms)
+        corpus.freq_dist(conc.RS(), crit, min_freq, words, freqs, norms)
         freq_table = [(w.split(), f) for w, f in zip(words, freqs)]
         freq_table.sort(key=lambda x:x[1], reverse=True)
         
@@ -156,7 +172,7 @@ class InflectedCollocation(object):
         query = u'[word="%s" & pos="%s"] [word="%s" & pos="%s"]' \
             % (self.core_word, self.core_pos, self.coll_word, self.coll_pos)
 
-        conc = manatee.Concordance(corp, query, example_count, -1)
+        conc = manatee.Concordance(corpus, query, example_count, -1)
         conc.sync()
     
         #=======================================================================
@@ -213,37 +229,96 @@ class CollocationExample(object):
         return " ".join(format_str % w if n in self.coll_pos else w
                         for (n, w) in enumerate(self.words))
                                 
+    def as_json(self):
+        return { "sentence": " ".join(self.words), "coll_pos": self.coll_pos, "ref": self.ref }
+    
     def __unicode__(self):
         return u"(CollocationExample %s @%s)" % (self.coll, self.ref) 
     
 
-import cherrypy
-from Cheetah.Template import Template
 from tqdm import tqdm
 
-class ManateeCollocationWebInterface(object):
-    def __init__(self, colls):
-        self.colls = colls
-        
-    @cherrypy.expose
-    def index(self):
-        tmpl = file("templates/collocation_review.tmpl").read().decode("utf-8")
-        t = Template(tmpl, searchList = [{"colls": self.colls}])
-        return unicode(t).encode("utf8")
 
+class ManateeCollocationExtractor(object):
+    """
+    ManateeCollocationExtractor("/home/mirko/Projects/arabic_corpora/manatee_corpora/registry/lcc", u"اتفاقية", u"NOUN")
+    e.fetch_collocation_candidates()
+    
+    """
+    def __init__(self, corpus_path, lemma, pos):
+        """
+        
+        """
+        self.corpus = manatee.Corpus (corpus_path)
+        self.lemma, self.pos = lemma, pos
+        
+        #query = u'[lempos="%s+%s"]' % (core_lemma, core_pos) -- DOES NOT WORK
+        query = u'[lemma="%s" & pos="%s"]' % (lemma, pos)
+        self.conc = manatee.Concordance(self.corpus, query.encode("utf-8"), 1000000, -1) # Returns immediately        
+        
+    def extract_noun_adj_collocations(self, min_freq):
+        candidates = self.fetch_collocation_candidates((1,1), min_freq)
+        
+    
+    
+    def fetch_collocation_candidates(self, window=(1, 1), min_freq=2):
+        """
+        Extract collocation candidates on lem-pos level, returning a list of tuples
+        (lemma, pos, freq, score).
+        
+        * window - tuple specifying the left and the right border of the extraction window,
+                 (-3, -1) would capture the two preceding tokens.
+        * min_freq - only include collocations occuring at least min_freq often         
+        
+        """
+
+        self.conc.sync() # Wait for all results to be fetched
+        r = manatee.CollocItems (self.conc,
+                                   "lempos", # cattr
+                                   "f",     # csorftn
+                                   min_freq,       # cminfreq
+                                   3,       # cminbgr -- CHECKME
+                                   window[0],       # cfromw
+                                   window[1],       # ctow
+                                   100000        #cmaxitems
+                                  )
+        
+        candidates = []
+        while not r.eos():
+            coll_lemma, _, coll_pos = r.get_item().decode("utf-8").rpartition("+")
+            # We do not store the collocator frequency col.get_cnt(),
+            candidates.append( (coll_lemma, coll_pos, r.get_freq(), r.get_bgr("m")) )
+            r.next()
+            
+        return candidates
+
+
+import pymongo
+
+def extract_candidates_into_db(corpus_path, mongodb_collection, core_lemma,
+                               core_pos, patterns = ["noun+ADJ", "noun+NOUN"]):
+    """
+    For every given pattern, instanciate an appropriate collocation extractor,
+    extract collocations for given core and add to mongodb collection
+    
+    """
+    corp = manatee.Corpus(corpus_path)
+    
+    # REWRITEME
+    raw_candidates = Collocation.fetch_collocations(corp, core_lemma, core_pos, min_freq=10)
+    candidates = filter(lambda c: c.coll_pos in ("ADJ", "NOUN"), raw_candidates)
+    for c in tqdm(candidates):
+        c.fetch_inflected_collocations(corp)
+        mongodb_collection.insert_one(c.as_json())
+    
  
 if __name__ == "__main__":
+    #cloud_url = "mongodb://admin:b4AAPjheEzxAuYFW@cluster0-shard-00-00-1utjf.mongodb.net:27017,cluster0-shard-00-01-1utjf.mongodb.net:27017,cluster0-shard-00-02-1utjf.mongodb.net:27017/test?ssl=true&replicaSet=Cluster0-shard-0&authSource=admin"
+    corpus_path = "/home/mirko/Projects/arabic_corpora/manatee_corpora/registry/lcc"
+    collection = pymongo.MongoClient().collocation_review.candidates
     core_lemma = u"اتفاقية"
     core_pos = u"NOUN"
-    corp = manatee.Corpus ("/home/mirko/Projects/arabic_corpora/manatee_corpora/registry/lcc")
-    
-    collocations = Collocation.fetch_collocations(corp, core_lemma, core_pos, min_freq=10)
-    adj_colls = [c for c in collocations if c.coll_pos == "ADJ"]
-    print "Got %s adj colls" % len(adj_colls)
-    for c in tqdm(adj_colls):
-        c.fetch_inflected_collocations(corp)
-                    
-    server = ManateeCollocationWebInterface(adj_colls)
-    cherrypy.quickstart(server, '/', "cherrypy.conf")
+
+    extract_candidates_into_db(corpus_path,collection, core_lemma, core_pos)
     
         
