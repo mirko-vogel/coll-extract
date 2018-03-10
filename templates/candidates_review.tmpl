@@ -6,6 +6,10 @@
   <style>
   body { direction: rtl; margin: 0px; width: 100%; font-size: 30px}
   div.header {width: 100%; color: white; background: black; padding: 10px; position: fixed}
+ 
+  div.header a:link, a:visited {text-decoration: none; color: white}
+  div.header a:hover {text-decoration: underline}
+
 	h1 {font-size: 30px; color: LightGrey; font-weight: normal; clear: both; padding-top:50px}
 
   div.content {padding: 20px;}
@@ -56,7 +60,13 @@
 
 <body>
 <div class="header">
-مُرَيجَع > تنقيح المتواردات اللفظية > صفات لاسم "اتفاقية"
+مُرَيجَع
+>
+<a href="/">
+تنقيح المتواردات اللفظية
+</a>
+>
+صفات لاسم "اتفاقية"
 </div>
 
 <div class="content">
@@ -78,6 +88,13 @@
   ## Yes, this is embarrasing
   $re.sub(u" ،", u"،", re.sub(u" [.]", u".", $hl))
 #end def
+#def coll_tooltip($c)
+	#for $f in $sorted($c.inflected_forms.values, key=lambda ic: ic["freq"], reverse=True)
+$f.core_word $f.coll_word ($f.freq)
+	#end for
+----------
+تردد إجمالي: $c.freq
+#end def
 
 #def render_coll_box($c)
 <%
@@ -93,7 +110,7 @@ def canonical_form(c):
 	#set $id = $c['_id']
 	<div class="box">
 		<div class="box-title $collocation_rating_class($c)" id="coll-$id">
-			<span class="collocation" title="تردد في المدونة اللغوية: $c.freq"> 
+			<span class="collocation" title="$coll_tooltip($c)"> 
 				$canonical_form($c)
 			</span>
 			<span class="coll-fb-buttons">

@@ -5,6 +5,7 @@ Created on Mar 1, 2018
 @author: mirko
 '''
 
+import sys
 from itertools import chain
 import manatee
 from operator import iconcat
@@ -37,20 +38,20 @@ class Collocation(object):
     classdocs
     '''
 
-    def __init__(self, core_lemma, core_pos, coll_lemma, coll_pos, freq, score):
+    def __init__(self, core_lemma, core_pos, coll_lemma, coll_pos, freq, coll_freq, score):
         '''
         Constructor
         '''
         self.core_lemma, self.core_pos = core_lemma, core_pos
         self.coll_lemma, self.coll_pos = coll_lemma, coll_pos
-        self.freq = freq
+        self.freq, self.coll_freq = freq, coll_freq
         self.score = score
         self.forms = []
     
     def as_json(self):
         return { "core_lemma": self.core_lemma, "core_pos": self.core_pos,
                  "coll_lemma": self.coll_lemma, "coll_pos": self.coll_pos,
-                 "freq": self.freq, "score": self.score, 
+                 "freq": self.freq, "coll_freq": self.coll_freq, "score": self.score, 
                  "inflected_forms": { f.wordpos: f.as_json() for f in self.forms} }
             
     def __unicode__(self):
@@ -68,7 +69,7 @@ class Collocation(object):
     def fetch_collocations(corp, core_lemma, core_pos, window=(1, 1), min_freq=2):
         """
         Extract collocation candidates from the given corpus on lem-pos level, returning
-        the candidates asa list of Collocation objects.
+        the candidates as list of Collocation objects.
         
         * window - tuple specifying the left and the right border of the extraction window,
                  (-3, -1) would capture the two preceding tokens.
@@ -95,8 +96,7 @@ class Collocation(object):
         collocations = []
         while not col.eos():
             lemma, _, pos = col.get_item().decode("utf-8").rpartition("+")
-            # We do not store the collocator frequency col.get_cnt(),
-            c = Collocation(core_lemma, core_pos, lemma, pos, col.get_freq(), col.get_bgr("m")) 
+            c = Collocation(core_lemma, core_pos, lemma, pos, col.get_cnt(), col.get_freq(), col.get_bgr("m")) 
             collocations.append(c)
             col.next()
             
@@ -316,7 +316,7 @@ if __name__ == "__main__":
     #cloud_url = "mongodb://admin:b4AAPjheEzxAuYFW@cluster0-shard-00-00-1utjf.mongodb.net:27017,cluster0-shard-00-01-1utjf.mongodb.net:27017,cluster0-shard-00-02-1utjf.mongodb.net:27017/test?ssl=true&replicaSet=Cluster0-shard-0&authSource=admin"
     corpus_path = "/home/mirko/Projects/arabic_corpora/manatee_corpora/registry/lcc"
     collection = pymongo.MongoClient().collocation_review.candidates
-    core_lemma = u"اتفاقية"
+    core_lemma = sys.argv[1].decode("utf-8")
     core_pos = u"NOUN"
 
     extract_candidates_into_db(corpus_path,collection, core_lemma, core_pos)
