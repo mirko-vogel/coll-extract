@@ -1,4 +1,5 @@
 #import string, re
+#from CollocationCandidateHelpers import *
 <html>
 <head>
   <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
@@ -54,6 +55,15 @@
 			$("#coll-" + _id).attr("class", "box-title got-fb-" + rating);
 		}
 
+		function rate_example(_id, ic_key, ref, rating)
+		{
+			$.ajax({
+				type: "POST",
+				url: "rate_example",
+				data: {"_id": _id, "ic_key": ic_key, "ref": ref, "rating": rating}
+			});
+			$("#ex-" + _id).attr("class", "box-content got-fb-" + rating);
+		}
   </script>
 #end raw
 </head>
@@ -71,23 +81,6 @@
 
 <div class="content">
 
-#def collocation_rating_class($c)
-	#if not "rating" in $c:
-		#return
-	#elif len($c.rating) > 1:
-    mixed
-  #else
-    got-fb-$c.rating.keys[0]
-  #end if
-#end def
-
-#def pretty_print_example($e)
-  #set $toks = $e.sentence.split(" ")
-	#set $hl_toks = ["<b>%s</b>" % w if n in $e.coll_pos else w for (n, w) in $enumerate($toks)]
-  #set hl = $str.join(" ", $hl_toks)
-  ## Yes, this is embarrasing
-  $re.sub(u" ،", u"،", re.sub(u" [.]", u".", $hl))
-#end def
 #def coll_tooltip($c)
 	#for $f in $sorted($c.inflected_forms.values, key=lambda ic: ic["freq"], reverse=True)
 $f.core_word $f.coll_word ($f.freq)
@@ -97,21 +90,12 @@ $f.core_word $f.coll_word ($f.freq)
 #end def
 
 #def render_coll_box($c)
-<%
-def canonical_form(c):
-	if c["inflected_forms"]:
-		for ic in c["inflected_forms"].itervalues():
-			if not ic["core_word"].startswith(u"ال"):
-				return "%s %s" % (ic["core_word"], ic["coll_word"])
-	
-	return "%s %s" % (c["core_lemma"], c["coll_lemma"])
-%>
-
 	#set $id = $c['_id']
+	#set $ic_key, $e = $get_example($c)
 	<div class="box">
-		<div class="box-title $collocation_rating_class($c)" id="coll-$id">
+		<div class="box-title got-fb-$get_rating($c)" id="coll-$id">
 			<span class="collocation" title="$coll_tooltip($c)"> 
-				$canonical_form($c)
+				$get_canonical_form($c)
 			</span>
 			<span class="coll-fb-buttons">
 				<button onclick="rate_collocation('$id', 'useful')" class="fb-useful">&#10004;&#10004;</a>
@@ -119,15 +103,13 @@ def canonical_form(c):
 				<button onclick="rate_collocation('$id', 'wrong')" class="fb-wrong">&#10008;</a>
 			</span>
 		</div>
-		<div class="box-content" id="ex-$id">
+		<div class="box-content got-fb-$get_rating($e)" id="ex-$id">
 			<span class="example">
-				#if $c.inflected_forms
-					#set $ic_key, $ic = $next($c.inflected_forms.iteritems)
-				  #set e = $next(ic["examples"].itervalues())
+				#if $e
 					$pretty_print_example($e)
+					<button onclick="rate_example('$id', '$ic_key', '$e.ref', 'correct')" class="fb-correct">&#10004;</button>
+					<button onclick="rate_example('$id', '$ic_key', '$e.ref', 'wrong')" class="fb-wrong">&#10008;</button>
 				#end if
-				<button onclick="set_class('ex-$id', 'box-content got-fb-correct')" class="fb-correct">&#10004;</button>
-				<button onclick="set_class('ex-$id', 'box-content got-fb-wrong')" class="fb-wrong">&#10008;</button>
 			</span>
 		</div>
 	</div>
@@ -138,7 +120,7 @@ def canonical_form(c):
 <div class="coll_group">
 <h1> متواردات لفظية لم تقيم بعد</h1>
 #for ($n, $c) in $enumerate($candidates):
-	#if not "rating" in $c:
+	#if not "ratings" in $c:
 		$render_coll_box($c)
   #end if
 #end for
@@ -147,7 +129,7 @@ def canonical_form(c):
 <div class="coll_group">
 <h1> متواردات لفظية تم تقييمها </h1>
 #for ($n, $c) in $enumerate($candidates):
-	#if "rating" in $c:
+	#if "ratings" in $c:
 		$render_coll_box($c)
   #end if
 #end for
