@@ -238,61 +238,6 @@ class CollocationExample(object):
 
 from tqdm import tqdm
 
-
-class ManateeCollocationExtractor(object):
-    """
-    ManateeCollocationExtractor("/home/mirko/Projects/arabic_corpora/manatee_corpora/registry/lcc", u"اتفاقية", u"NOUN")
-    e.fetch_collocation_candidates()
-    
-    """
-    def __init__(self, corpus_path, lemma, pos):
-        """
-        
-        """
-        self.corpus = manatee.Corpus (corpus_path)
-        self.lemma, self.pos = lemma, pos
-        
-        #query = u'[lempos="%s+%s"]' % (core_lemma, core_pos) -- DOES NOT WORK
-        query = u'[lemma="%s" & pos="%s"]' % (lemma, pos)
-        self.conc = manatee.Concordance(self.corpus, query.encode("utf-8"), 1000000, -1) # Returns immediately        
-        
-    def extract_noun_adj_collocations(self, min_freq):
-        candidates = self.fetch_collocation_candidates((1,1), min_freq)
-        
-    
-    
-    def fetch_collocation_candidates(self, window=(1, 1), min_freq=2):
-        """
-        Extract collocation candidates on lem-pos level, returning a list of tuples
-        (lemma, pos, freq, score).
-        
-        * window - tuple specifying the left and the right border of the extraction window,
-                 (-3, -1) would capture the two preceding tokens.
-        * min_freq - only include collocations occuring at least min_freq often         
-        
-        """
-
-        self.conc.sync() # Wait for all results to be fetched
-        r = manatee.CollocItems (self.conc,
-                                   "lempos", # cattr
-                                   "f",     # csorftn
-                                   min_freq,       # cminfreq
-                                   3,       # cminbgr -- CHECKME
-                                   window[0],       # cfromw
-                                   window[1],       # ctow
-                                   100000        #cmaxitems
-                                  )
-        
-        candidates = []
-        while not r.eos():
-            coll_lemma, _, coll_pos = r.get_item().decode("utf-8").rpartition("+")
-            # We do not store the collocator frequency col.get_cnt(),
-            candidates.append( (coll_lemma, coll_pos, r.get_freq(), r.get_bgr("m")) )
-            r.next()
-            
-        return candidates
-
-
 import pymongo
 
 def extract_candidates_into_db(corpus_path, mongodb_collection, core_lemma,
@@ -320,5 +265,5 @@ if __name__ == "__main__":
     core_pos = u"NOUN"
 
     extract_candidates_into_db(corpus_path,collection, core_lemma, core_pos)
-    
+
         
