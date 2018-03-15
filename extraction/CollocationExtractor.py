@@ -1,9 +1,9 @@
 # coding=utf-8
-'''
+"""
 Created on Mar 13, 2018
 
 @author: mirko
-'''
+"""
 
 import manatee
 from collections import defaultdict
@@ -13,39 +13,7 @@ import operator
 
 from Concordance import Concordance
 
-"""
-To put it down...
-
-A collocation in a pos-tagged, lemmazized corpus is given by
-1) a pos pattern with holes
-(noun patterns only, currently)
-A. NOUN adj
-B. NOUN * verb
-C. verb * NOUN
-D. NOUN noun
-E. noun NOUN
-F. verb * prep NOUN 
-
-These patterns translate into a query
-A. [lemma="%s" & pos="N"] [pos="ADJ"] {"lemma"} 
-B. [lemma="NOUN" & pos="N"] []{0,} [pos="V"] 
-...
-
-The result of the search then needs to be parsed ...
-
-DAS DAUERT ZU LANGE!
-
-2) constraints
-
-
-Pattern Extractor
-> build query
-> for every kwic_line (kw only)
->   extract candidate (drop in-between tokens)
->   instances[candidate.lempos][candidate.word-pos] +=1 (add examples?) 
-> filter candidates (candidate.word-pos)
-
-"""
+from operator import itemgetter
 
 
 class MalformedPatternException(Exception):
@@ -59,45 +27,122 @@ class CollocationExtractor(object):
     core (lemma and pos) and a given pattern.
     """
 
-    def __init__(self, corpus_path, lemma, pos):
+    def __init__(self, corpus_path, lemma):
         """
         Constructs a ColllocationExtractor
         """
 
         self.corpus = manatee.Corpus(corpus_path)
-        self.lemma, self.pos = lemma, pos
+        self.lemma = lemma
+        self.candidates = []
 
-        # query = u'[lempos="%s+%s"]' % (core_lemma, core_pos) -- DOES NOT WORK
-        #query = u'[lemma="%s" & pos="%s"]' % (self.lemma, self.pos)
-        #self.conc = Concordance(self.corpus, query.encode("utf-8"), 1000000, -1)  # Returns immediately
-
-
-    def extract_candidates(self, extract_inflected_forms, extract_examples):
+    def extract_candidate_tokens(self, toks):
         """
-        Extracts candidates
+        Removes tokens matched by * in pattern
+        """
+        if not self.asterix_pos_in_pattern:
+            return toks
 
-        :param extract_inflected_forms:
-        :param extract_examples:
+        l = len(self.pattern) - self.asterix_pos_in_pattern - 1
+        return toks[:self.asterix_pos_in_pattern] + toks[-l:]
+
+    def fetch_candidates(self):
+        """
+        Fetches collocation candidates using the candidate query template,
+        storing them in self.candidates.
+
+        """
+        q = self.candidate_query_template % self.lemma
+        c = Concordance(self.corpus, q, 1000000, -1)
+        c.sync()
+        attr = ["word", "pos", "lemma", "fullpos"]
+        lines = c.get_kwic_lines((1, c.size()), (0, 0), attr, ["s"])
+
+        instance_counts = defaultdict(lambda: defaultdict(int))
+        for l in lines:
+            for a in attr:
+                l[a] = self.extract_candidate_tokens(l[a])
+            coll_wordpos = u" ".join(u"%s+%s" % (w, p) for w, p in izip(l["word"], l["fullpos"]))
+            coll_lempos = u" ".join(u"%s+%s" % (w, p) for w, p in izip(l["lemma"], l["pos"]))
+            instance_counts[coll_lempos][coll_wordpos] += 1
+
+        self.candidates = sorted((CollocationCandidate(lempos, freqs, self)
+                                  for lempos, freqs in instance_counts.iteritems()),
+                                 key=lambda c: c.freq, reverse=True)
+
+    def filter_candidates(self, min_freq=0, min_score=0):
+        self.candidates = filter(lambda c: c.freq >= min_freq, self.candidates)
+        pass
+
+    def get_examples(self, n=10):
+        """
+
+        :param n:
         :return:
         """
-        raw_candidates = self.fetch_collocation_candidates()
-        candidates = []
-        for (lemma, pos, freq, score) in raw_candidates:
-            c = self.extract_candidate(lemma, pos)
-            if c:
-                candidates.append(c)
-        return candidates
+        for c in self.candidates:
+            c.examples = self.__get_examples(c.lemma.split(" "), attributes=["word", "pos"], n=n)
 
-    def extract_candidate(self, lemma, pos):
+    def __get_examples(self, candidate, inflected=False, attributes=["word"], n=10):
         """
-        Extracts a candidate, possibly returning Null
+        Returns sentences containing the collocation candidate.
 
-        :param lemma:
-        :param pos:
+        :param candidate: list of surface forms or lemmas
+        :param inflected:
+        :param attributes:
+        :param n:
         :return:
+        """
+
+        # Query
+        if inflected:
+            q = self.example_by_word_query_template % tuple(candidate)
+        else:
+            q = self.example_by_lemma_query_template % tuple(candidate)
+
+        c = Concordance(self.corpus, q, n, -1)
+        c.sync()
+        lines = c.get_kwic_lines((0, n), ("-1:s", "1:s"), attributes, ["s"])
+
+        # Add collocation token indexes
+        for l in lines:
+            m = l.pop("metadata")
+            pos = [n for n, cls in enumerate(m) if cls == u"col0 coll"]
+            l["coll_pos"] = self.extract_candidate_tokens(pos)
+
+        return lines
+
+    # -- Properties of extracted candidates
+
+    @property
+    def candidate_count(self):
+        """
+        Returns the number of candidate "types", that is the number of distinct
+        matches of the pattern on lemma level
 
         """
-        raise NotImplementedError
+        return len(self.candidates)
+
+    @property
+    def instance_count(self):
+        """
+        Returns the number of instances, that is the number of matches of the pattern
+        in the corpus.
+
+        """
+        return sum(c.freq for c in self.candidates)
+
+    # -- Core-related properties
+
+    @property
+    def core_pos(self):
+        return next(p for p in self.pattern if p.isupper())
+
+    @property
+    def core_lempos(self):
+        return "%s+%s" % (self.lemma, self.core_pos)
+
+    # -- Pattern-related properties
 
     @property
     def pattern(self):
@@ -108,86 +153,140 @@ class CollocationExtractor(object):
         """
         raise NotImplementedError
 
-    def build_qcl_query(self):
+    @property
+    def friendly_pattern(self):
+        """
+        e.g. "V + noun"
+
+        :rtype: unicode
+        """
+        return " + ".join(p for p in self.pattern if p != u"*")
+
+    @property
+    def pattern_length(self):
+        return len(self.pattern) - self.pattern.count(u"*")
+
+    @property
+    def pattern_pos_tags(self):
+        """ Returns the uppercased pos tags of the pattern, dropping asterixes """
+        return [p.upper() for p in self.pattern if p != u"*"]
+
+    @property
+    def core_pos_in_pattern(self):
+        return next(n for n, p in enumerate(self.pattern) if p.isupper())
+
+    @property
+    def asterix_pos_in_pattern(self):
+        """
+        Returns the position of the asterix in the pattern. Returns none if the pattern
+        does not contain an asterix.
+        """
+        try:
+            return self.pattern.index(u"*")
+        except ValueError:
+            return None
+
+    # -- Query templates
+
+    @property
+    def candidate_query_template(self):
+        raise NotImplementedError
+
+    @property
+    def example_by_lemma_query_template(self):
+        raise NotImplementedError
+
+    @property
+    def example_by_word_query_template(self):
+        return self.example_by_lemma_query_template.replace("lemma", "word")
+
+    def __build_qcl_query(self):
         """
         Returns a QCL-query for self.pattern
 
         :rtype: unicode
 
+        # Build example query - TODO: merge with self.build_qcl_query
+        q_template = '[word="%s" & pos="%s"]'
+        if not is_inflected:
+            q_template = '[lemma="%s" & pos="%s"]'
+        query = [q_template % (c, p) for (c, p) in zip(candidate, self.pattern_pos_tags())]
+        query.insert(self.asterix_pos_in_pattern, u'[ ]{0,}')
+
+
         """
         q = []
-        for p in self.pattern:
+        for n, p in enumerate(self.pattern):
             # Either core, e.g. "NOUN"
             if p.isupper():
-                if p != self.pos:
-                    raise MalformedPatternException("Pattern requires a '%s' core, but we have '%s'."
-                                                    % (p, self.pos))
                 q.append(u'[lemma="%s" & pos="%s"]' % (self.lemma, p))
             # or collocator, e.g. "ajg"
             elif p.islower():
                 q.append(u'[pos="%s"]' % p.upper())
             elif p == "*":
-                q.append(u'[ ]{0,}') # TODO: exclude pos tags
+                # TODO: exclude pos tags
+                # q.append(u'[pos!="%s" & pos!="%s"]{0,}') % (self.pattern[n-1].upper(), self.pattern[n-1].upper())
+                q.append(u'[ ]{0,}')
             else:
                 raise MalformedPatternException(u"Not knowing how to interpret '%s'" % p)
 
         q.append(u"within < s/>")
         return u" ".join(q)
 
-    def extract_candidate_tokens(self, toks):
-        """
-        Removes tokens matched by * in pattern
-        """
-        try:
-            idx = self.pattern.index(u"*")
-        except ValueError:
-            return toks
 
-        l = len(self.pattern) - idx - 1
-        return toks[:idx] + toks[-l:]
-
-
-
-    def get_candidates(self):
+class CollocationCandidate(object):
+    def __init__(self, lempos, freqs, extractor, examples=None):
         """
 
-        :return:
+        :param lempos:
+        :param freqs: maps word-fullpos -> count
+        :param extractor:
+        :type extractor: CollocationExtractor
+
         """
-        c = Concordance(self.corpus, self.build_qcl_query(), 1000000, -1)
-        c.sync()
-        attr = ["word", "pos", "lemma", "fullpos"]
-        lines = c.get_kwic_lines((1, c.size()), (0, 0),  attr, ["s"])
+        self.extractor = extractor
+        self.lempos = lempos
+        self.freqs = freqs
+        self.examples = examples if examples else []
 
-        instances = defaultdict(lambda: defaultdict(int))
-        for l in lines:
-            for a in attr:
-                l[a] = self.extract_candidate_tokens(l[a])
-            coll_wordpos = u" ".join(u"%s+%s" % (w, p) for w,p in izip(l["word"], l["fullpos"]))
-            coll_lempos = u" ".join(u"%s+%s" % (w, p) for w, p in izip(l["lemma"], l["pos"]))
-            instances[coll_lempos][coll_wordpos] += 1
+    def get_inflected_counts(self):
+        """ Returns a descendingly sorted list of word+fullpos count tuples """
+        return sorted(self.freqs.iteritems(), key=itemgetter(1), reverse=True)
 
-        # TODO: filter instances
-        return instances
+    @property
+    def core_lempos(self):
+        return self.extractor.core_lempos
+
+    @property
+    def pattern(self):
+        return self.extractor.friendly_pattern
+
+    @property
+    def lemma(self):
+        return u" ".join(x.partition("+")[0] for x in self.lempos.split(" "))
+
+    @property
+    def freq(self):
+        return sum(self.freqs.itervalues())
+
+    def get_as_json(self):
+        return {"core_lempos": self.core_lempos, "lempos": self.lempos,
+                "lemma": self.lemma, "pattern": self.pattern,
+                "freq": self.freq, "score": 0,  # TODO: Add score info
+                "wordpos_freqs": self.get_inflected_counts(),
+                "examples": self.examples}
+
 
 class SimplePatternExtractor(CollocationExtractor):
-    def __init__(self, corpus_path, lemma, pos, pattern):
+    def __init__(self, corpus_path, lemma, pattern):
         self._pattern = pattern
-        super(SimplePatternExtractor, self).__init__(corpus_path, lemma, pos)
+        super(SimplePatternExtractor, self).__init__(corpus_path, lemma)
 
     @property
     def pattern(self):
         return self._pattern
 
+
 PATTERNS = [["NOUN", "*", "v"], ["v", "*", "NOUN"], ["v", "*", "prep", "NOUN"],
             ["NOUN", "adj"], ["NOUN", "noun"], ["noun", "NOUN"]]
 
-if __name__ == "__main__":
-    path = "/home/mirko/Projects/arabic_corpora/manatee_corpora/registry/lcc"
-    for p in PATTERNS:
-        print "-------------------------------------\n%s" % p
-        e = SimplePatternExtractor(path, u"اتفاقية", "NOUN", p)
-        cc = e.get_candidates()
-        lempos_freqs = dict((lempos, sum(freqs.itervalues())) for lempos, freqs in cc.iteritems())
-        top_10 = sorted(lempos_freqs.iteritems(), key=operator.itemgetter(1), reverse=True)[:10]
-        for lempos, freq in top_10:
-            print freq, lempos

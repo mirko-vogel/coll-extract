@@ -37,8 +37,10 @@ def parse_stream(s, attributes):
             metadata += repeat(m.strip("{}"), len(v_split))
         return { attributes[0]: values, "metadata": metadata }
 
-    r = { attributes[0]: s[0::4], "metadata": [m.strip("{}") for m in s[1::4]] }
-    # Drop the first other attribute, is is always empty
+    # Strange, sometimes the "word" attribute has an extra space ...
+    r = { attributes[0]: [a.strip(" ") for a in s[0::4]],
+          "metadata": [m.strip("{}") for m in s[1::4]] }
+    # Drop the first other attribute, it is always empty
     other_attrs = [a.split("/")[1:] for a in s[2::4]]
     for n, attr in enumerate(attributes[1:]):
         r[attr] = [attrs[n] for attrs in other_attrs]
@@ -118,6 +120,7 @@ class Concordance(manatee.Concordance):
             attribute tuples, a list of positions of the keywords, and a list of references.
             This list will contain a single element unless the line does crosses the boundary
             of one of the structures specified in struct.
+        :rtype: list[dict]
 
         """
         rs = self.RS(True, line_range[0], line_range[1])
@@ -130,7 +133,7 @@ class Concordance(manatee.Concordance):
         while kl.nextline():
             l, m, r = kl.get_left(), kl.get_kwic(), kl.get_right()
             l = parse_stream(l + m + r, attrs)
-            l["refs"] = kl.get_refs()
+            l["ref"] = kl.get_refs()
             lines.append(l)
 
         return lines
