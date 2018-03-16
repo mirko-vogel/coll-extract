@@ -1,8 +1,9 @@
+#from urllib import quote_plus
 #import string
 <html>
 <head>
   <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
-  <title>Collocation Review</title>
+  <title>مُرَيجَع > تقييم المتواردات اللفظية</title>
   <style>
   body { direction: rtl; margin: 0px; width: 100%; font-size: 30px}
   div.header {width: 100%; color: white; background: black; padding: 10px; position: fixed}
@@ -47,22 +48,24 @@
 
 <body>
 <div class="header">
-مُرَيجَع > تنقيح المتواردات اللفظية > صفات لاسم "اتفاقية"
+مُرَيجَع > تقييم المتواردات اللفظية
 ($user_name)
 </div>
-
+مباحثة اتفاقية صليب مفاوضة
 
 <div class="content">
-#for (($core_lemma, $core_pos), coll_pos_counts) in $cores.items:
+#for ($core_lempos, $pattern_counts) in $cores.items:
 <div class="box">
 	<div class="box-title">
 		<span class="collocation"> 
-			$core_lemma			
+			#echo $core_lempos.partition("+")[0]
 		</span>
 	</div>
 	<div class="box-content">
-	#for $pos in $coll_pos_counts:
-		<a href="candidates?core_lemma=$core_lemma&core_pos=$core_pos&coll_pos=$pos">$pos</a>
+	#for $pattern in $pattern_counts:
+        <p>
+		<a href="candidates?core_lempos=$quote_plus($core_lempos.encode('utf-8'))&pattern=$quote_plus($pattern)">$pattern</a>
+        </p>
 	#end for
 	</div>
 </div>

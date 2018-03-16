@@ -55,12 +55,12 @@
 			$("#coll-" + _id).attr("class", "box-title got-fb-" + rating);
 		}
 
-		function rate_example(_id, ic_key, ref, rating)
+		function rate_example(_id, e_idx, rating)
 		{
 			$.ajax({
 				type: "POST",
 				url: "rate_example",
-				data: {"_id": _id, "ic_key": ic_key, "ref": ref, "rating": rating}
+				data: {"_id": _id, "e_idx": e_idx, "rating": rating}
 			});
 			$("#ex-" + _id).attr("class", "box-content got-fb-" + rating);
 		}
@@ -82,8 +82,8 @@
 <div class="content">
 
 #def coll_tooltip($c)
-	#for $f in $sorted($c.inflected_forms.values, key=lambda ic: ic["freq"], reverse=True)
-$f.core_word $f.coll_word ($f.freq)
+	#for ($wordpos, $f) in $c.wordpos_freqs:
+$f #echo " ".join(wp.partition("+")[0] for wp in $wordpos.split(" "))
 	#end for
 ----------
 تردد إجمالي: $c.freq
@@ -91,25 +91,23 @@ $f.core_word $f.coll_word ($f.freq)
 
 #def render_coll_box($c)
 	#set $id = $c['_id']
-	#set $ic_key, $e = $get_example($c)
+	#set $e_idx, $e = 0, $c.examples[0]
 	<div class="box">
 		<div class="box-title got-fb-$get_rating($c)" id="coll-$id">
 			<span class="collocation" title="$coll_tooltip($c)"> 
 				$get_canonical_form($c)
 			</span>
 			<span class="coll-fb-buttons">
-				<button onclick="rate_collocation('$id', 'useful')" class="fb-useful">&#10004;&#10004;</a>
-				<button onclick="rate_collocation('$id', 'correct')" class="fb-correct">&#10004;</a>
-				<button onclick="rate_collocation('$id', 'wrong')" class="fb-wrong">&#10008;</a>
+				<button onclick="rate_collocation('$id', 'useful')" class="fb-useful">&#10004;&#10004;</button>
+				<button onclick="rate_collocation('$id', 'correct')" class="fb-correct">&#10004;</button>
+				<button onclick="rate_collocation('$id', 'wrong')" class="fb-wrong">&#10008;</button>
 			</span>
 		</div>
 		<div class="box-content got-fb-$get_rating($e)" id="ex-$id">
 			<span class="example">
-				#if $e
-					$pretty_print_example($e)
-					<button onclick="rate_example('$id', '$ic_key', '$e.ref', 'correct')" class="fb-correct">&#10004;</button>
-					<button onclick="rate_example('$id', '$ic_key', '$e.ref', 'wrong')" class="fb-wrong">&#10008;</button>
-				#end if
+                $pretty_print_example($e)
+                <button onclick="rate_example('$id', '$e_idx', 'correct')" class="fb-correct">&#10004;</button>
+                <button onclick="rate_example('$id', '$e_idx', 'wrong')" class="fb-wrong">&#10008;</button>
 			</span>
 		</div>
 	</div>

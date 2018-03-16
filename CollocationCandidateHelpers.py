@@ -7,14 +7,6 @@ Created on Mar 11, 2018
 
 import re
 
-#def pretty_print_example($e)
-#set $toks = $e.sentence.split(" ")
-#set $hl_toks = ["<b>%s</b>" % w if n in $e.coll_pos else w for (n, w) in $enumerate($toks)]
-#set hl = $str.join(" ", $hl_toks)
-## Yes, this is embarrasing
-#$re.sub(u" ،", u"،", re.sub(u" [.]", u".", $hl))
-#end def
-
 def get_example(c):
     """
     
@@ -35,18 +27,20 @@ def get_canonical_form(c):
     Returns most frequent form without determination if this form exists, too
     
     """
-    ics = sorted(c["inflected_forms"].itervalues(), key = lambda ic: ic["freq"])
-    if not ics:
-            return "%s %s" % (c["core_lemma"], c["coll_lemma"])
+    return c["lemma"]
 
-    candidates = [(ic["core_word"], ic["coll_word"]) for ic in ics]
-    core, coll = candidates[-1]
-    core_indet = core[2:] if core.startswith(u"ال") else core
-    coll_indet = coll[2:] if coll.startswith(u"ال") else coll
-    
-    if (core_indet, coll_indet) in candidates:
-        return "%s %s" % (core_indet, coll_indet)
-    return "%s %s" % (core, coll)
+    # ics = sorted(c["inflected_forms"].itervalues(), key = lambda ic: ic["freq"])
+    # if not ics:
+    #         return "%s %s" % (c["core_lemma"], c["coll_lemma"])
+    #
+    # candidates = [(ic["core_word"], ic["coll_word"]) for ic in ics]
+    # core, coll = candidates[-1]
+    # core_indet = core[2:] if core.startswith(u"ال") else core
+    # coll_indet = coll[2:] if coll.startswith(u"ال") else coll
+    #
+    # if (core_indet, coll_indet) in candidates:
+    #     return "%s %s" % (core_indet, coll_indet)
+    # return "%s %s" % (core, coll)
 
 
 def get_rating(o):
@@ -64,9 +58,10 @@ def get_rating(o):
     return next(iter(s))
 
 def pretty_print_example(e):
-    toks = e["sentence"].split(" ")
-    hl_toks = ["<b>%s</b>" % w if n in e["coll_pos"] else w for (n, w) in enumerate(toks)]
+    hl_toks = ["<b>%s</b>" % w if n in e["coll_pos"] else w
+               for (n, w) in enumerate(e["word"])]
     hl = u" ".join(hl_toks)
+    # TODO: Decent postprocessing
     return re.sub(u" ،", u"،", re.sub(u" [.]", u".", hl))
 
 
