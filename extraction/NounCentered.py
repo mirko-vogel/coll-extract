@@ -14,11 +14,11 @@ class AdjectiveExtractor(CollocationExtractor):
 
     @property
     def candidate_query_template(self):
-        return '[lemma="%s" & pos="NOUN"] [pos="ADJ"]'
+        return '[lempos="%s\\+NOUN"] [pos="ADJ"]'
 
     @property
     def example_by_lemma_query_template(self):
-        return '[lemma="%s" & pos="NOUN"] [lemma="%s" & pos="ADJ"]'
+        return '[lempos="%s\\+NOUN"] [lempos="%s\\+ADJ"]'
 
 
 class MudafExtractor(CollocationExtractor):
@@ -28,11 +28,11 @@ class MudafExtractor(CollocationExtractor):
 
     @property
     def candidate_query_template(self):
-        return '[lemma="%s" & pos="NOUN"] [pos="NOUN"]'
+        return '[lempos="%s\\+NOUN"] [pos="NOUN"]'
 
     @property
     def example_by_lemma_query_template(self):
-        return '[lemma="%s" & pos="NOUN"] [lemma="%s" & pos="NOUN"]'
+        return '[lempos="%s\\+NOUN"] [lempos="%s\\+NOUN"]'
 
 class MudafIlehiExtractor(CollocationExtractor):
     @property
@@ -41,39 +41,39 @@ class MudafIlehiExtractor(CollocationExtractor):
 
     @property
     def candidate_query_template(self):
-        return '[pos="NOUN"] [lemma="%s" & pos="NOUN"]'
+        return '[pos="NOUN"] [lempos="%s\\+NOUN"]'
 
     @property
     def example_by_lemma_query_template(self):
-        return '[lemma="%s" & pos="NOUN"] [lemma="%s" & pos="NOUN"]'
+        return '[lempos="%s\\+NOUN"] [lempos="%s\\+NOUN"]'
 
 
 class VerbForSubjectExtractor(CollocationExtractor):
     @property
     def pattern(self):
-        return ["NOUN", "v"]
+        return ["NOUN", "*", "v"]
 
     @property
     def candidate_query_template(self):
-        return '[lemma="%s" & pos="NOUN"] [ pos!="V" ]{0,} [pos="V"] within < s/>'
+        return '[lempos="%s\\+NOUN"] [ pos!="V" ]{0,} [pos="V"] within < s/>'
 
     @property
-    def candidate_query_template(self):
-        return '[lemma="%s" & pos="NOUN"] [ pos!="V" ]{0,} [lemma="%s" & pos="V"] within < s/>'
+    def example_by_lemma_query_template(self):
+        return '[lempos="%s\\+NOUN"] [ pos!="V" ]{0,} [lempos="%s\\+V"] within < s/>'
 
 
 class VerbForObjectExtractor(CollocationExtractor):
     @property
     def pattern(self):
-        return ["v", "NOUN"]
+        return ["v", "*", "NOUN"]
 
     @property
     def candidate_query_template(self):
-        return '[pos="V"] [ pos!="V" ]{0,} [lemma="%s" & pos="NOUN"] within < s/>'
+        return '[pos="V"] [ pos!="V" ]{0,} [lempos="%s\\+NOUN"] within < s/>'
 
     @property
     def example_by_lemma_query_template(self):
-        return '[pos="V" lemma="%s"] [ pos!="V" ]{0,} [lemma="%s" & pos="NOUN"] within < s/>'
+        return '[lempos="%s\\+V"] [ pos!="V" ]{0,} [lempos="%s\\+NOUN"] within < s/>'
 
 
 if __name__ == "__main__":
