@@ -71,8 +71,19 @@ class CollocationExtractor(object):
                                  key=lambda c: c.freq, reverse=True)
 
     def filter_candidates(self, min_freq=0, min_score=0):
-        self.candidates = filter(lambda c: c.freq >= min_freq, self.candidates)
-        pass
+        """
+        Filters for non-letter characters, frequency, score ...
+
+        :param min_freq:
+        :param min_score:
+        :return:
+        """
+        filters = [
+            lambda c: c.freq >= min_freq,
+            lambda c: set(c.lemma).isdisjoint(u"\"'.,،-()[]{}")
+        ]
+        all_filters = lambda x: all(f(x) for f in filters)
+        self.candidates = filter(all_filters, self.candidates)
 
     def get_examples(self, n=10):
         """
