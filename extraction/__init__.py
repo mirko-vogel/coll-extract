@@ -1,4 +1,2 @@
-from NounCentered import *
-
-ALL_EXTRACTORS = (AdjectiveExtractor, MudafExtractor, MudafIlehiExtractor,
-                  VerbForSubjectExtractor, VerbForObjectExtractor)
+from Pattern import Pattern, NOUN_PATTERNS
+from PatternExtractor import PatternExtractor

@@ -1,4 +1,5 @@
 # coding=utf-8
+import logging
 import manatee
 import tempfile
 
@@ -35,11 +36,11 @@ def parse_stream(s, attributes):
             v_split = v.strip(" ").split(" ")
             values += v_split
             metadata += repeat(m.strip("{}"), len(v_split))
-        return { attributes[0]: values, "metadata": metadata }
+        return {attributes[0]: values, "metadata": metadata}
 
     # Strange, sometimes the "word" attribute has an extra space ...
-    r = { attributes[0]: [a.strip(" ") for a in s[0::4]],
-          "metadata": [m.strip("{}") for m in s[1::4]] }
+    r = {attributes[0]: [a.strip(" ") for a in s[0::4]],
+         "metadata": [m.strip("{}") for m in s[1::4]]}
     # Drop the first other attribute, it is always empty
     other_attrs = [a.split("/")[1:] for a in s[2::4]]
     for n, attr in enumerate(attributes[1:]):
@@ -47,10 +48,30 @@ def parse_stream(s, attributes):
 
     return r
 
+
 class Concordance(manatee.Concordance):
     """
 
     """
+
+    def __init__(self, corpus, q, max_hits=None, async=True):
+        """
+
+        :param corpus:
+        :type corpus: manatee.Corpus
+        :param q:
+        :param max_hits: defaults to corpus size
+        :param async:
+
+        """
+        if not max_hits:
+            max_hits = corpus.size()
+
+        logging.debug("Querying corpus %s: %s", corpus.get_conffile(), q)  # TODO corpus name
+        manatee.Concordance.__init__(self, corpus, q, max_hits, -1)
+        if not async:
+            self.sync()
+
     def extract_collocations(self, attribute, sort_key, min_freq, min_bgr, window, max_count):
         """
         Wrapper around manatee.CollocItems to extract collocation candidates
@@ -77,7 +98,6 @@ class Concordance(manatee.Concordance):
 
         return candidates
 
-
     def filter(self, query, window, rank=1):
         """
         Filters the concordance only retaining lines where the query is matched
@@ -92,7 +112,7 @@ class Concordance(manatee.Concordance):
         self.set_collocation(collnum, query + ";", str(window[0]), str(window[1]), rank, exclude_kwic=True)
         self.delete_pnfilter(collnum, True)
 
-    def copy(self, tmpdir = None):
+    def copy(self, tmpdir=None):
         """
         Creates a copy of the concordance by writing it to disk and reading it again.
 
@@ -142,6 +162,7 @@ class Concordance(manatee.Concordance):
         lines = self.get_kwic_lines(line_range, context_window, ["word"], [])
         return [" ".join(line["word"]) for line in lines]
 
+
 if __name__ == "__main__":
     path = "/home/mirko/Projects/arabic_corpora/manatee_corpora/registry/lcc"
     query1 = u'[lemma="%s" & pos="NOUN"]' % u"اتفاقية"
@@ -152,26 +173,11 @@ if __name__ == "__main__":
     query4 = verb_prep_noun_pattern % u"اتفاقية"
     corp = manatee.Corpus(path)
     t = datetime.now()
-    c = Concordance(corp, query4, 1000000, -1)
+    c = Concordance(corp, query4)
     c.sync()
     print c.size()
     print datetime.now() - t
-    r = c.get_kwic_lines((1, 5), ("-1:s", "1:s"), ["word", "pos", "lemma", "fullpos"], ["s"], ["ltr"])
-    #r = c.get_kwic_lines((1, 5), ("-1:s", "1:s"), ["word", "pos"], ["s"], ["ltr"])
+    r = c.get_kwic_lines((1, 5), ("-1:s", "1:s"), ["word", "pos", "lemma", "fullpos"], ["s"], "ltr")
+    # r = c.get_kwic_lines((1, 5), ("-1:s", "1:s"), ["word", "pos"], ["s"], ["ltr"])
     for l in c.get_kwic_lines_as_strings((1, 5)):
         print l
-    #c2 = c.copy()
-    #c2.filter(query2, ("-5", "5"))
-    #c2.sync()
-    #print c2.size()
-    #print "\n".join(c2.get_kwic_lines_as_strings( (1,2)))
-
-    #c3 = c.copy()
-    #c3.filter(query3, ("-1:s", "1:s"))
-    #c3.sync()
-    #print c3.size()
-    #print c3.get_kwic_lines_as_strings((1,2))[0]
-    #r = c3.get_kwic_lines( (1,2), ("-1:s", "1:s"), ["word"], ["s"])
-    #r =  c3.get_kwic_lines((1, 2), ("-1:s", "1:s"), ["word", "pos"], ["s"])
-    #r = c3.get_kwic_lines((2, 3), ("-1:s", "1:s"), ["word", "pos"], ["s"], ["ltr"])
-    #print r

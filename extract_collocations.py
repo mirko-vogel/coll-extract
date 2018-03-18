@@ -1,23 +1,28 @@
 #!/usr/bin/python
+# coding=utf-8
 import json
-
-from pymongo import MongoClient
-
-from extraction import ALL_EXTRACTORS
 import argparse
 import logging
+from pymongo import MongoClient
+
+from extraction import Pattern, PatternExtractor
 
 if __name__ == "__main__":
-    known_extractors = dict( (c.__name__, c) for c in ALL_EXTRACTORS)
-
     p = argparse.ArgumentParser()
-    p.add_argument("core", type=str,
-                   help="The core word to extract collocations for")
     p.add_argument("corpus", type=argparse.FileType(),
                    help="Path to the manatee corpus registry file")
+    p.add_argument("core", type=str, nargs="+",
+                   help="The cores (lemmas) to extract collocations for")
+    p.add_argument("--debug", action="store_true",
+                   help="Log debug messages")
 
-    p.add_argument("--extractors", nargs="+", type=str, default=known_extractors.keys(),
-                   help="Extractors to run")
+    g = p.add_argument_group("Pattern parameters")
+    p.add_argument("--pattern", type=str,
+                   help="Pattern to extract collocations for")
+    p.add_argument("--asterix", type=str, default="[]{0,}",
+                   help="Representation of * in CQL")
+    p.add_argument("--within", type=str, default="s",
+                   help="Limit patterns to match within given structure")
 
     g = p.add_argument_group("Example selection parameters")
     g.add_argument("--example-count", type=int, default=10,
@@ -37,11 +42,15 @@ if __name__ == "__main__":
     g.add_argument("--db-collection", type=str, default="candidates")
 
     args = p.parse_args()
-    core = args.core.decode("utf-8")
+    cores = [s.decode("utf-8").split(" ") for s in args.core]
+    p = Pattern(args.pattern, args.asterix, args.within)
 
     logging.basicConfig(format='%(asctime)s %(message)s', level=logging.INFO)
-    logging.info("Extracting collocations for '%s' using the following extractors: %s",
-                 core, ", ".join(args.extractors))
+    if args.debug:
+        logging.getLogger().setLevel(logging.DEBUG)
+
+    logging.info("Extracting collocations (pattern '%s') for the following cores: %s",
+                 unicode(p), ", ".join(" ".join(c) for c in cores))
 
     if args.out_file:
         logging.info("Extracted collocations will be written to '%s'.", args.out_file.name)
@@ -50,26 +59,30 @@ if __name__ == "__main__":
                      args.db_url, args.db_name, args.db_collection)
         db = MongoClient(args.db_url).get_database(args.db_name).get_collection(args.db_collection)
 
-    candidates = []
-    for cls_name in args.extractors:
-        e = known_extractors[cls_name](args.corpus.name, core)
-        logging.info("Starting extraction for pattern '%s' with %s ...",
-                     e.friendly_pattern, cls_name)
-        e.fetch_candidates()
-        logging.info("Fetched %s candidates (%d instances).", e.candidate_count, e.instance_count)
+    result = []
+    e = PatternExtractor(args.corpus.name, p)
+    for core in cores:
+        logging.info("Extracting collocations for '%s' ...", " ".join(core))
+        candidates = e.fetch_candidates(core)
 
         logging.info("Filtering candidates ...")
-        e.filter_candidates(min_freq=args.min_freq, min_score=args.min_score)
-        logging.info("Done. %d candidates (%d instances) remaining.", e.candidate_count, e.instance_count)
+        candidates = [c for c in candidates
+                      if c.freq >= args.min_freq
+                      and  set(c.lemma).isdisjoint(u"\"'.,،-()[]{}")]
+        logging.info("Done. %d candidates (%d instances) remaining.",
+                     len(candidates), sum(c.freq for c in candidates))
 
-        logging.info("Getting %d examples for each candidate ...", args.example_count)
-        e.get_examples(n = args.example_count)
+        logging.info("Getting %d examples and marginal counts for each candidate ...", args.example_count)
+        for c in candidates:
+            c.fetch_marginal_count()
+            c.fetch_examples(["word", "fullpos"], args.example_count)
+            result.append(c.get_as_json())
+
         logging.info("Done.")
-        candidates.extend(e.get_as_json() for e in e.candidates)
 
     logging.info("Extracting finished, saving candidates ...")
     if args.out_file:
-        json.dump(candidates, args.out_file, indent=2, ensure_ascii=False, encoding="utf-8")
+        json.dump(result, args.out_file, indent=2, ensure_ascii=False, encoding="utf-8")
     else:
-        db.insert_many(candidates)
+        db.insert_many(result)
     logging.info("Done.")

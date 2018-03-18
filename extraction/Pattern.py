@@ -1,8 +1,23 @@
 # coding=utf-8
 
+NOUN_PATTERNS = ['NOUN * v', 'v * NOUN', 'NOUN adj', 'NOUN noun', 'noun NOUN',
+            'v * prep NOUN', "noun prep NOUN", "NOUN adj prep"]
+
 class Pattern(object):
     u"""
-    Represents a collocation extraction pattern.
+    Represents a collocation pattern, e.g. "v * prep NOUN".
+
+    This pattern can be instantiated to produce queries representing different
+    cells in the contingency table, namely:
+
+    * a  = #(u, v)
+    * N  = #(*, *)
+    * R1 = #(u, *)
+    * C1 = #(*, v)
+
+    These values are sufficient to calculate the remaining values. (Note that
+    there are no queries to directly obtain the numbers b, c and d as there
+    is not easy way to negate a multi-word pattern in QCL.)
 
     >>> p = Pattern("v * prep NOUN", asterix='[pos!="V"]{0,}')
     >>> print p.get_all_query()
@@ -16,7 +31,7 @@ class Pattern(object):
 
     """
 
-    def __init__(self, p, asterix="[]{0,}", within="< s/>"):
+    def __init__(self, p, asterix="[]{0,}", within_structure="s"):
         """
 
         :param p: The pattern as a sequence of pos tags where uppercase marks
@@ -24,13 +39,14 @@ class Pattern(object):
         :type p: unicode
         :param asterix: how to render the asterix in the query
         :type asterix: unicode
-        :param within: last element of query
-        :type within: unicode
+        :param within_structure: limit query matches to given structure
+            (is translated as "within < x/> in query)
+        :type within_structure: unicode
         """
 
         self.p = p.split(" ")
         self.asterix = asterix
-        self.within = within
+        self.within_structure = within_structure
 
         self.core_idx, self.core_pos = {}, []
         self.coll_idx, self.coll_pos = {}, []
@@ -48,6 +64,66 @@ class Pattern(object):
                 self.asterix_idx[n] = len(self.asterix_idx)
             else:
                 raise Exception("Pattern token invalid '%s'" % s)
+
+    def __unicode__(self):
+        return u" ".join(self.p)
+
+    def as_string(self, core_lemma=None, coll_lemma=None):
+        """ Returns a partially of fully instantiated pattern as string """
+        pass # TODO
+
+    @property
+    def pos(self):
+        """
+        Returns the pos tags of the pattern
+
+        >>> Pattern("v * prep NOUN").pos
+        ['V', 'PREP', 'NOUN']
+
+        """
+        return [s.upper() for s in self.p if s != u"*"]
+
+    def get_toks_from_matched_line(self, line, match_begin=0, match_end=None):
+        """
+        Helper returning the indexes of the core and of the collocator in a match.
+
+        >>> p = Pattern("NOUN adj")
+        >>> p.get_toks_from_matched_line(range(10), 0, 3)
+        ([0], [1])
+        >>> p = Pattern("v * prep NOUN")
+        >>> p.get_toks_from_matched_line(["V", "PREP", "NOUN"])
+        (['NOUN'], ['V', 'PREP'])
+        >>> p.get_toks_from_matched_line(range(10), 2, 8) # asterix matched 5 tokens
+        ([8], [2, 7])
+        >>> p.get_toks_from_matched_line(range(10), 2, 4) # asterix matched 0 tokens
+        ([4], [2, 3])
+
+        :param line: A list of tokens containing a match of this pattern
+        :type line: list()
+        :param match_begin: first index of match
+        :param match_end: last index of match
+        :rtype: tuple[list,list]
+        """
+
+        # Cannot handle case with more than one asterix ...
+        if len(self.asterix_idx) > 1:
+            raise NotImplementedError
+
+        if match_end is None:
+            match_end = len(line) - 1
+
+        asterix_pos_in_pattern = next(iter(self.asterix_idx), len(self.p))
+        match_length = match_end - match_begin + 1
+        asterix_length =  match_length - len(self.core_idx) - len(self.coll_idx)
+
+        def f(idx):
+            if idx < asterix_pos_in_pattern:
+                return match_begin + idx
+            return match_begin + idx + asterix_length - 1
+
+        core_toks = [s for (n, s) in enumerate(line) if n in map(f, self.core_idx)]
+        coll_toks = [s for (n, s) in enumerate(line) if n in map(f, self.coll_idx)]
+        return core_toks, coll_toks
 
     def instantiate(self, core_attr=None, coll_attr=None, inject_pos=True):
         u"""
@@ -101,8 +177,8 @@ class Pattern(object):
 
             p.append(u"[%s]" % u" & ".join('%s="%s"' % (a, v) for (a, v) in d.iteritems()))
 
-        if self.within:
-            p.append("within %s" % self.within)
+        if self.within_structure:
+            p.append("within < %s/>" % self.within_structure)
 
         return u" ".join(p)
 
