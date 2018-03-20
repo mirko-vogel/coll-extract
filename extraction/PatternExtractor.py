@@ -14,7 +14,7 @@ class PatternExtractor(object):
 
     """
 
-    def __init__(self, corpus_path, pattern):
+    def __init__(self, corpus_path, pattern, N=0):
         """
 
         :param corpus_path:
@@ -27,10 +27,12 @@ class PatternExtractor(object):
         self.pattern = pattern
         self.candidates = []
 
-        logging.info("Getting N for pattern %s", unicode(self.pattern))
-        q = self.pattern.get_all_query()
-        self.N = Concordance(self.corpus, q, async=False).size()
-        logging.info("Done. N = %d", self.N)
+        if not N:
+            logging.info("Getting N for pattern %s", unicode(self.pattern))
+            q = self.pattern.get_all_query()
+            N = Concordance(self.corpus, q, async=False).size()
+            logging.info("Done. N = %d", self.N)
+        self.N = N
 
     def fetch_candidates(self, core_lemmas):
         """
@@ -114,7 +116,7 @@ class CollocationCandidate(object):
         logging.debug("Getting examples for %s ...", self.lemma)
         q = self.pattern.get_by_core_coll_query(self.core_lemmas, self.coll_lemmas)
         c = Concordance(self.extractor.corpus, q, async=False)
-        lines = c.get_kwic_lines((0, n), ("-1:s", "1:s"), attributes, ["s"])
+        lines = c.get_kwic_lines((0, n), ("-1:s", "1:s"), attributes, ["s"], ["g"])
 
         # Add collocation token indexes
         for e in lines:
