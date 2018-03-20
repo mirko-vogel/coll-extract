@@ -56,6 +56,7 @@ class PatternExtractor(object):
         lines = c.get_kwic_lines((1, c.size()), (0, 0), attr, ["s"])
 
         for l in lines:
+            full_match_length = len(l["word"])
             # Extract actual match of pattern
             core_idx, coll_idx = self.pattern.get_toks_from_matched_line(range(len(l["word"])))
             for a in attr:
@@ -66,7 +67,7 @@ class PatternExtractor(object):
             c = candidates.get(k)
             if not c:
                 candidates[k] = c = CollocationCandidate(l["lemma"], self, R1)
-            c.add_instance(l)
+            c.add_instance(l, full_match_length)
 
         logging.info("Done, there are %d candidates.", len(candidates))
         return sorted(candidates.itervalues(), key=lambda c: c.freq, reverse=True)
@@ -88,18 +89,27 @@ class CollocationCandidate(object):
         self.core_lemmas, self.coll_lemmas = p.get_toks_from_matched_line(lemmas)
         self.core_pos, self.coll_pos = p.get_toks_from_matched_line(p.pos)
 
+        # maps surface form -> count
         self.instance_counts = defaultdict(int)
+        # maps length -> count, match length = collocation length + asterix length
+        self.pattern_match_length_dist = defaultdict(int)
+
         self.examples = []
         self.R1 = R1
         self.C1 = 0
 
-    def add_instance(self, l):
+    def add_instance(self, l, match_length):
         k = " ".join(l["word"])
         self.instance_counts[k] += 1
+        self.pattern_match_length_dist[match_length] += 1
 
     def get_instance_counts(self):
         """ Returns a descendingly sorted list of word count tuples """
         return sorted(self.instance_counts.iteritems(), key=itemgetter(1), reverse=True)
+
+    def get_pattern_match_length_dist(self):
+        """ Returns a sorted list of match length - count tuples """
+        return sorted(self.pattern_match_length_dist.iteritems(), key=itemgetter(0))
 
     def fetch_marginal_count(self):
         """ Fetches R1 """
@@ -167,6 +177,7 @@ class CollocationCandidate(object):
         r["contingency_table"] = self.contingency_table()
         r["scores"] = {}  # TODO: Add score info
         r["instance_counts"] = self.get_instance_counts()
+        r["pattern_match_length_dist"] = self.get_pattern_match_length_dist()
         r["examples"] = self.examples
         return r
 
