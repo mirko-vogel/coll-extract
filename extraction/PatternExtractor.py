@@ -5,6 +5,8 @@ from collections import defaultdict
 from itertools import izip
 from operator import itemgetter
 
+import math
+
 from Pattern import Pattern, NOUN_PATTERNS
 from Concordance import Concordance
 
@@ -31,7 +33,7 @@ class PatternExtractor(object):
             logging.info("Getting N for pattern %s", unicode(self.pattern))
             q = self.pattern.get_all_query()
             N = Concordance(self.corpus, q, async=False).size()
-            logging.info("Done. N = %d", self.N)
+            logging.info("Done. N = %d", N)
         self.N = N
 
     def fetch_candidates(self, core_lemmas):
@@ -138,6 +140,7 @@ class CollocationCandidate(object):
 
         logging.debug("Done")
 
+    @property
     def contingency_table(self):
         """ Returns the constituency table as a dict. """
         a = self.freq
@@ -149,7 +152,28 @@ class CollocationCandidate(object):
 
         c = self.C1 - a
         d = N - a - b - c
-        return {"a": a, "b": b, "c": c, "d": d}
+        return {"a": a, "b": b, "c": c, "d": d, "C1": a+b, "C2": c+d, "R1": a+c, "R2": b+d, "N": N}
+
+    @property
+    def scores(self):
+        scores = {}
+        if not self.C1:
+            return scores
+
+        t = self.contingency_table
+        E_a = float(t["R1"]*t["C1"]) / t["N"]
+        E_b = float(t["R1"]*t["C2"]) / t["N"]
+        E_c = float(t["R2"]*t["C1"]) / t["N"]
+        E_d = float(t["R2"]*t["C2"]) / t["N"]
+
+        expected = (E_a, E_b, E_c, E_d)
+        observed = (t["a"], t["b"], t["c"], t["d"])
+
+        ll = 2 * sum(o * math.log(o/e) for (o, e) in zip(observed, expected)
+                     if 0 != 0)
+        scores["log_likelihood"] = ll
+
+        return scores
 
     @property
     def pattern(self):
@@ -174,8 +198,8 @@ class CollocationCandidate(object):
         r["lemma"] = self.lemma
         r["pattern"] = unicode(self.pattern)
         r["freq"] = self.freq
-        r["contingency_table"] = self.contingency_table()
-        r["scores"] = {}  # TODO: Add score info
+        r["contingency_table"] = self.contingency_table
+        r["scores"] = self.scores
         r["instance_counts"] = self.get_instance_counts()
         r["pattern_match_length_dist"] = self.get_pattern_match_length_dist()
         r["examples"] = self.examples
@@ -185,11 +209,12 @@ class CollocationCandidate(object):
 if __name__ == "__main__":
     logging.basicConfig(format='%(asctime)s %(message)s', level=logging.DEBUG)
 
-    path = "/home/mirko/Projects/arabic_corpora/manatee_corpora/registry/lcc"
+    path = "/home/mirko/Projects/arabic_corpora/manatee_corpora/registry/aj_test"
     for p in NOUN_PATTERNS:
-        e = PatternExtractor(path, Pattern(p))
+        e = PatternExtractor(path, Pattern(p), 100)
         cc = e.fetch_candidates([u"حرب"])
         c = cc[0]
         c.fetch_marginal_count()
+        print c.scores
         c.fetch_examples()
         print c.get_as_json()
