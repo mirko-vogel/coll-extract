@@ -1,25 +1,29 @@
+#from urllib import quote_plus
 #import string, re
 #from CollocationCandidateHelpers import *
-#set $core = $core_lempos.partition("+")[0]
-#set $ar_pattern = $str.join(" + ", $arabic_pattern($pattern, $core))
+
+#set $c = $candidate
+#set $core = $c.core_lempos.partition("+")[0]
+#set $ar_pattern = $str.join(" + ", $arabic_pattern($c.pattern, $core))
+
 <html>
 <head>
   <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
-  <title>مُرَيجَع > تقييم المتواردات اللفظية < $ar_pattern</title>
+  <title>مُرَيجَع > تقييم المتواردات اللفظية < $ar_pattern < $get_canonical_form($c)</title>
   <style>
   body { direction: rtl; margin: 0px; width: 100%; font-size: 30px}
-  div.header {width: 100%; color: white; background: black; padding: 10px; position: fixed}
- 
-  a:link, a:visited {text-decoration: none;}
-  div.header a:link, a:visited {color: white}
+  div.header {width: 100%; color: white; background: black; padding: 10px; position: fixed; }
+
+  div.header a:link, a:visited {text-decoration: none; color: white}
   div.header a:hover {text-decoration: underline}
 
 	h1 {font-size: 30px; color: LightGrey; font-weight: normal; clear: both; padding-top:50px}
 
-  div.content {padding: 20px;}
+  div.content {padding: 20px; }
 	div.coll_group {}
 
-  div.box { width: 350px; float: right; border: 1px solid black; margin: 20px; min-height: 250px}
+  div.examples {column-count: 3}
+  div.box { width: 90%; border: 1px solid black; margin: 20px; min-height: 250px; margin-top: 60px}
 
   div.box-title, div.box-content { margin: 0px; padding: 10px; }
 
@@ -31,17 +35,18 @@
   div.box-content { font-size: 15px; line-height: 25px; }
   div.box-content.got-fb-correct { color: green }
   div.box-content.got-fb-wrong { color: DarkRed }
-  
-  span.example { }
+
+  div.metadata { font-size: 15px; color:grey; padding: 10px }
+
   span.core_tok { font-weight: bold }
   span.coll_tok { font-weight: bold }
-
+  span.example {display: inline-block;}
   span.coll-fb-buttons { float:left;}
   button { border: 0px; height: 30px; margin: 0px; background-color: transparent; }
   button:hover { background-color: LightGrey }
   button.fb-useful { color: green; }
   button.fb-correct { color: LightGreen; }
-  button.fb-wrong { color: DarkRed; }  
+  button.fb-wrong { color: DarkRed; }
 
   </style>
   <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
@@ -64,7 +69,7 @@
 				url: "rate_example",
 				data: {"_id": _id, "e_idx": e_idx, "rating": rating}
 			});
-			$("#ex-" + _id).attr("class", "box-content got-fb-" + rating);
+			$("#ex-" + e_idx).attr("class", "box-content got-fb-" + rating);
 		}
   </script>
 #end raw
@@ -72,33 +77,27 @@
 
 <body>
 <div class="header">
-مُرَيجَع
->
-<a href="/">
-تقييم المتواردات اللفظية
-</a>
->
-$ar_pattern
+    مُرَيجَع
+    >
+    <a href="/">
+        تقييم المتواردات اللفظية
+    </a>
+    >
+    <a href="candidates?core_lempos=$quote_plus($c.core_lempos.encode('utf-8'))&pattern=$quote_plus($c.pattern)">
+        $ar_pattern
+    </a>
+    >
+    $get_canonical_form($c)
 </div>
+$ar_pattern
 
 <div class="content">
 
-#def coll_tooltip($c)
-	#for ($word, $f) in $c.instance_counts:
-$f #echo " ".join(wp.partition("+")[0] for wp in $word.split(" "))
-	#end for
-----------
-تردد إجمالي: $c.freq
-#end def
-
-#def render_coll_box($c)
 	#set $id = $c['_id']
-	#set $e_idx, $e = 0, $c.examples[0]
 	<div class="box">
 		<div class="box-title got-fb-$get_rating($c)" id="coll-$id">
-			<span class="collocation" title="$coll_tooltip($c)"> 
+			<span class="collocation">
 				$get_canonical_form($c)
-                <a href="candidate?_id=$id">&#x1f50d;</a>
 			</span>
 			<span class="coll-fb-buttons">
 				<button onclick="rate_collocation('$id', 'useful')" class="fb-useful">&#10004;&#10004;</button>
@@ -106,36 +105,40 @@ $f #echo " ".join(wp.partition("+")[0] for wp in $word.split(" "))
 				<button onclick="rate_collocation('$id', 'wrong')" class="fb-wrong">&#10008;</button>
 			</span>
 		</div>
-		<div class="box-content got-fb-$get_rating($e)" id="ex-$id">
+        <div class="metadata">
+
+            <b>تردد إجمالي: $c.freq</b> |
+            |
+        #for ($w, $f) in $c.instance_counts[:5]:
+            $w ($f) |
+    	#end for
+        <span title="$c.instance_counts">...</span>
+        <p>
+            <b>
+                متوسط طول المتواردة
+                :
+                #echo $str.format("{:0.1f}", $float($sum(l * freq for (l, freq) in $c.pattern_match_length_dist)) / $c.freq)
+            </b> |
+
+        #for ($l, $freq) in $c.pattern_match_length_dist:
+            $l كلمات ($freq) |
+    	#end for
+        </p>
+        </div>
+        <div class="examples">
+    #for $e_idx, $e in $enumerate($c.examples)
+		<div class="box-content got-fb-$get_rating($e)" id="ex-$e_idx">
 			<span class="example">
                 $pretty_print_example($e)
                 <button onclick="rate_example('$id', '$e_idx', 'correct')" class="fb-correct">&#10004;</button>
                 <button onclick="rate_example('$id', '$e_idx', 'wrong')" class="fb-wrong">&#10008;</button>
 			</span>
 		</div>
+    #end for
+        </div>
 	</div>
-#end def
-
-#set $candidates = sorted($candidates, key=lambda c: c["freq"], reverse=True)
-
-<div class="coll_group">
-<h1> متواردات لفظية لم تقيم بعد</h1>
-#for ($n, $c) in $enumerate($candidates):
-	#if not "ratings" in $c:
-		$render_coll_box($c)
-  #end if
-#end for
 </div>
 
-<div class="coll_group">
-<h1> متواردات لفظية تم تقييمها </h1>
-#for ($n, $c) in $enumerate($candidates):
-	#if "ratings" in $c:
-		$render_coll_box($c)
-  #end if
-#end for
-</div>
-</div>
 
 </body>
 </html>

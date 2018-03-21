@@ -132,6 +132,13 @@ class CollocationCandidate(object):
 
         # Add collocation token indexes
         for e in lines:
+            # Handle token glue tags </g>
+            e["glue_idx"] = []
+            while "<g/>" in e["word"]:
+                e["glue_idx"].append(e["word"].index("<g/>"))
+                for a in attributes + ["metadata"]:
+                    e[a].pop(e["glue_idx"][-1])
+
             m = e.pop("metadata")
             pos = [n for n, cls in enumerate(m) if cls == u"col0 coll"]
             e["core_idx"], e["coll_idx"] \

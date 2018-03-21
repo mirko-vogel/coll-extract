@@ -1,3 +1,4 @@
+#!/usr/bin/python
 '''
 Created on Mar 10, 2018
 
@@ -63,9 +64,17 @@ class ReviewWebInterface(object):
         user_name = self.assure_logged_in()
         r = self.db.candidates.find({"core_lempos":core_lempos, "pattern": pattern})
         tmpl = file("templates/candidates_review.tmpl").read().decode("utf-8")
-        t = Template(tmpl, searchList = [{"candidates": r}])
+        t = Template(tmpl, searchList = [{"candidates": r, "pattern": pattern, "core_lempos": core_lempos}])
         return unicode(t).encode("utf8")
-    
+
+    @cherrypy.expose
+    def candidate(self, _id):
+        user_name = self.assure_logged_in()
+        r = self.db.candidates.find_one({"_id": ObjectId(_id)})
+        tmpl = file("templates/candidate_review.tmpl").read().decode("utf-8")
+        t = Template(tmpl, searchList = [{"candidate": r}])
+        return unicode(t).encode("utf8")
+
     @cherrypy.expose
     def rate_collocation(self, _id, rating):
         """
@@ -91,5 +100,5 @@ class ReviewWebInterface(object):
                                           "type": "rate_example", "rating": rating})
     
 if __name__ == "__main__":
-    server = ReviewWebInterface(pymongo.MongoClient().collocation_review)
+    server = ReviewWebInterface(pymongo.MongoClient().candidates_v2)
     cherrypy.quickstart(server, '/', "cherrypy.conf")

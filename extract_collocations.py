@@ -19,7 +19,7 @@ if __name__ == "__main__":
     g = p.add_argument_group("Pattern parameters")
     p.add_argument("--pattern", type=str,
                    help="Pattern to extract collocations for")
-    p.add_argument("--asterix", type=str, default="[]{0,}",
+    p.add_argument("--asterix", type=str,
                    help="Representation of * in CQL")
     p.add_argument("--within", type=str, default="s",
                    help="Limit patterns to match within given structure")
@@ -29,6 +29,8 @@ if __name__ == "__main__":
                    help="Number of examples to fetch for each candidate.")
 
     g = p.add_argument_group("Candidate filter parameters")
+    g.add_argument("--max-candidate-count", type=int, default=0,
+                   help="Truncate the freq-sorted candidate list")
     g.add_argument("--min-freq", type=int, default=0,
                    help="Drop candidates if freq is below min_freq")
     g.add_argument("--min-score", type=int, default=0,
@@ -43,6 +45,12 @@ if __name__ == "__main__":
 
     args = p.parse_args()
     cores = [s.decode("utf-8").split(" ") for s in args.core]
+
+    if not args.asterix:
+        if "v" in args.pattern:
+            args.asterix = '[pos!="V"]{0,}'
+        else:
+            args.asterix = "[]{0,}"
     p = Pattern(args.pattern, args.asterix, args.within)
 
     logging.basicConfig(format='%(asctime)s %(message)s', level=logging.INFO)
@@ -51,6 +59,7 @@ if __name__ == "__main__":
 
     logging.info("Extracting collocations (pattern '%s') for the following cores: %s",
                  unicode(p), ", ".join(" ".join(c) for c in cores))
+    logging.info("Asterix representation is '%s'", args.asterix)
 
     if args.out_file:
         logging.info("Extracted collocations will be written to '%s'.", args.out_file.name)
@@ -71,6 +80,10 @@ if __name__ == "__main__":
                       and  set(c.lemma).isdisjoint(u"\"'.,،-()[]{}")]
         logging.info("Done. %d candidates (%d instances) remaining.",
                      len(candidates), sum(c.freq for c in candidates))
+
+        if args.max_candidate_count and len(candidates) > args.max_candidate_count:
+            candidates = candidates[:args.max_candidate_count]
+            logging.info("Truncated candidate list to %d.", args.max_candidate_count)
 
         logging.info("Getting %d examples and marginal counts for each candidate ...", args.example_count)
         for c in candidates:

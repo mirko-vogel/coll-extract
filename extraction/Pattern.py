@@ -1,7 +1,7 @@
 # coding=utf-8
 
-NOUN_PATTERNS = ['NOUN * v', 'v * NOUN', 'NOUN adj', 'NOUN noun', 'noun NOUN',
-            'v * prep NOUN', "noun prep NOUN", "NOUN adj prep"]
+NOUN_PATTERNS = ("NOUN * v", "v * NOUN", "NOUN adj", "NOUN noun", "noun NOUN",
+                 "v * prep NOUN", "noun prep NOUN", "NOUN adj prep")
 
 class Pattern(object):
     u"""

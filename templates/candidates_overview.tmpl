@@ -1,9 +1,11 @@
 #from urllib import quote_plus
 #import string
+#from CollocationCandidateHelpers import *
+#set $title = u"مُرَيجَع > تقييم المتواردات اللفظية"
 <html>
 <head>
   <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
-  <title>مُرَيجَع > تقييم المتواردات اللفظية</title>
+  <title>$title</title>
   <style>
   body { direction: rtl; margin: 0px; width: 100%; font-size: 30px}
   div.header {width: 100%; color: white; background: black; padding: 10px; position: fixed}
@@ -11,29 +13,17 @@
   div.content {padding: 20px; padding-top: 70px; }
 
   div.box { width: 350px; float: right; border: 1px solid black; margin: 20px}
-
   div.box-title, div.box-content { margin: 0px; padding: 10px; }
-
   div.box-title { border-bottom: 1px solid black; font-size: 23px; }
-  div.box-title.got-fb-useful { background-color: green ; font-weight: bold}
-  div.box-title.got-fb-correct { background-color: LightGreen ; font-weight: bold}
-  div.box-title.got-fb-wrong { background-color: DarkRed }
-
   div.box-content { font-size: 15px; line-height: 25px; }
-  div.box-content.got-fb-correct { color: green }
-  div.box-content.got-fb-wrong { color: DarkRed }
-  
-  span.collocation { }  
 
-  span.example { }
-  span.collocation_word { font-weight: bold }
+  a:link, a:visited {text-decoration: none}
+  a:hover {text-decoration: underline}
 
-  span.coll-fb-buttons { float:left;}
-  button { border: 0px; height: 30px; margin: 0px; background-color: transparent; }
-  button:hover { background-color: LightGrey }
-  button.fb-useful { color: green; }
-  button.fb-correct { color: LightGreen; }
-  button.fb-wrong { color: DarkRed; }  
+  div.box-content a { color: black}
+  div.header a { color: white}
+
+  span.username { float:left; margin-left: 30px; font-size:15px; margin-top: 7px  }
 
   </style>
   
@@ -48,23 +38,29 @@
 
 <body>
 <div class="header">
-مُرَيجَع > تقييم المتواردات اللفظية
-($user_name)
+$title
+<span class="username">
+    حضرتك:
+    </b><a href="/login_page"><b>$user_name</b></a></span>
+</span>
 </div>
-مباحثة اتفاقية صليب مفاوضة
+
 
 <div class="content">
 #for ($core_lempos, $pattern_counts) in $cores.items:
+#set $core = $core_lempos.partition("+")[0]
 <div class="box">
 	<div class="box-title">
 		<span class="collocation"> 
-			#echo $core_lempos.partition("+")[0]
+			$core
 		</span>
 	</div>
 	<div class="box-content">
 	#for $pattern in $pattern_counts:
         <p>
-		<a href="candidates?core_lempos=$quote_plus($core_lempos.encode('utf-8'))&pattern=$quote_plus($pattern)">$pattern</a>
+		<a href="candidates?core_lempos=$quote_plus($core_lempos.encode('utf-8'))&pattern=$quote_plus($pattern)">
+            #echo $str.join(" + ", $arabic_pattern($pattern, $core))
+        </a>
         </p>
 	#end for
 	</div>

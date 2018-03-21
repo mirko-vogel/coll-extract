@@ -57,13 +57,25 @@ def get_rating(o):
         return "mixed"
     return next(iter(s))
 
-def pretty_print_example(e):
-    hl_toks = ["<b>%s</b>" % w if n in e["coll_pos"] else w
-               for (n, w) in enumerate(e["word"])]
-    hl = u" ".join(hl_toks)
-    # TODO: Decent postprocessing
-    return re.sub(u" ،", u"،", re.sub(u" [.]", u".", hl))
 
+def pretty_print_example(e):
+    s = ""
+    for (n, w) in enumerate(e["word"]):
+        if n in e["core_idx"]:
+            w = '<span class="core_tok">%s</span>' % w
+        elif n in e["coll_idx"]:
+            w = '<span class="coll_tok">%s</span>' % w
+        if n not in e["glue_idx"]:
+            s += " %s" % w
+        else:
+            s += w
+
+    return re.sub(u" ،", u"،", re.sub(u" [.]", u".", s))
+
+
+def arabic_pattern(p, noun):
+    ar_tags = {"v": u"فعل", "noun": u"اسم", "adj": u"صفة", "prep": u"حرف جر", "NOUN": noun }
+    return [ar_tags[t] for t in p.split() if t != "*"]
 
 if __name__ == '__main__':
     pass
