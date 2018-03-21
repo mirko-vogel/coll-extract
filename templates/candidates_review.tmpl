@@ -93,7 +93,7 @@ $f #echo " ".join(wp.partition("+")[0] for wp in $word.split(" "))
 
 #def render_coll_box($c)
 	#set $id = $c['_id']
-	#set $e_idx, $e = 0, $c.examples[0]
+	#set $e_idx, $e = $next( ((n, e) for (n, e) in $enumerate($c.examples) if not $get_rating(e)), (None, None))
 	<div class="box">
 		<div class="box-title got-fb-$get_rating($c)" id="coll-$id">
 			<span class="collocation" title="$coll_tooltip($c)"> 
@@ -106,13 +106,15 @@ $f #echo " ".join(wp.partition("+")[0] for wp in $word.split(" "))
 				<button onclick="rate_collocation('$id', 'wrong')" class="fb-wrong">&#10008;</button>
 			</span>
 		</div>
-		<div class="box-content got-fb-$get_rating($e)" id="ex-$id">
-			<span class="example">
-                $pretty_print_example($e)
-                <button onclick="rate_example('$id', '$e_idx', 'correct')" class="fb-correct">&#10004;</button>
-                <button onclick="rate_example('$id', '$e_idx', 'wrong')" class="fb-wrong">&#10008;</button>
-			</span>
-		</div>
+        #if $e
+            <div class="box-content got-fb-$get_rating($e)" id="ex-$id">
+                <span class="example">
+                    $pretty_print_example($e)
+                    <button onclick="rate_example('$id', '$e_idx', 'correct')" class="fb-correct">&#10004;</button>
+                    <button onclick="rate_example('$id', '$e_idx', 'wrong')" class="fb-wrong">&#10008;</button>
+                </span>
+            </div>
+        #end if
 	</div>
 #end def
 

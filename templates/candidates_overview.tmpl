@@ -16,7 +16,7 @@
   div.box-title, div.box-content { margin: 0px; padding: 10px; }
   div.box-title { border-bottom: 1px solid black; font-size: 23px; }
   div.box-content { font-size: 15px; line-height: 25px; }
-
+  span.pattern-meta { color: grey; font-size: 12px}
   a:link, a:visited {text-decoration: none}
   a:hover {text-decoration: underline}
 
@@ -40,7 +40,9 @@
 <div class="header">
 $title
 <span class="username">
-    حضرتك:
+    <b>$sum($contributions.itervalues)</b> مشاركات
+    من <b>$len($contributions)</b> <span title="$str.join(', ', $contributions.iterkeys)">أشخاص</span>
+    |
     </b><a href="/login_page"><b>$user_name</b></a></span>
 </span>
 </div>
@@ -56,11 +58,14 @@ $title
 		</span>
 	</div>
 	<div class="box-content">
-	#for $pattern in $pattern_counts:
+	#for ($pattern, $to_review) in $pattern_counts.iteritems:
         <p>
 		<a href="candidates?core_lempos=$quote_plus($core_lempos.encode('utf-8'))&pattern=$quote_plus($pattern)">
             #echo $str.join(" + ", $arabic_pattern($pattern, $core))
         </a>
+        <span class="pattern-meta">
+            ($to_review لم تقيم بعد)
+        </span>
         </p>
 	#end for
 	</div>

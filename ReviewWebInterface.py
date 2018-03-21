@@ -41,22 +41,34 @@ class ReviewWebInterface(object):
 
     @cherrypy.expose
     def login_page(self):
+        s = cherrypy.session
         tmpl = file("templates/login.tmpl").read().decode("utf-8")
-        t = Template(tmpl, searchList = [{}])
+        t = Template(tmpl, searchList = [{"user_name": s.get("user_name"), "user_email": s.get("user_email")}])
         return unicode(t).encode("utf8")
     
     @cherrypy.expose
     def index(self):
         user_name = self.assure_logged_in()
         # Yes, this should be done with $group
-        r = self.db.candidates.find({}, {"_id": 0, "core_lempos": 1, "pattern": 1})
-        cores = defaultdict(lambda: defaultdict(int))
+        r = self.db.candidates.find({}, {"_id": 1, "core_lempos": 1, "pattern": 1, "ratings": 1})
+        cores = {}
         for c in r:
-            cores[c["core_lempos"]][c["pattern"]] +=1
-        
+            if c["core_lempos"] not in cores:
+                cores[c["core_lempos"]] = {}
+            if c["pattern"] not in cores[c["core_lempos"]]:
+                cores[c["core_lempos"]][c["pattern"]] = 0
+            if not "ratings" in c:
+                cores[c["core_lempos"]][c["pattern"]] += 1
+
+        r = self.db.feedback.find({}, {"_id": 0, "user": 1})
+        d = {}
+        for c in r:
+            d.setdefault(c["user"], 0)
+            d[c["user"]] += 1
+
         tmpl = file("templates/candidates_overview.tmpl").read().decode("utf-8")
         t = Template(tmpl, searchList = [{"cores": dict(cores.iteritems()),
-                                          "user_name": user_name}])
+                                          "user_name": user_name, "contributions": d}])
         return unicode(t).encode("utf8")
     
     @cherrypy.expose

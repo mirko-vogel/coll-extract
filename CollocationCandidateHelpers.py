@@ -57,7 +57,6 @@ def get_rating(o):
         return "mixed"
     return next(iter(s))
 
-
 def pretty_print_example(e):
     s = ""
     for (n, w) in enumerate(e["word"]):
