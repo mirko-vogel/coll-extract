@@ -4,15 +4,17 @@
 #set $ar_pattern = $str.join(" + ", $arabic_pattern($pattern, $core))
 <html>
 <head>
-  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
-  <title>مُرَيجَع > تقييم المتواردات اللفظية < $ar_pattern</title>
-  <style>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <title>مُرَيجَع > تقييم المتواردات اللفظية < $ar_pattern</title>
+    <style>
   body { direction: rtl; margin: 0px; width: 100%; font-size: 30px}
   div.header {width: 100%; color: white; background: black; padding: 10px; position: fixed}
- 
-  a:link, a:visited {text-decoration: none;}
+
+  a:link, a:visited {text-decoration: none; color: black;}
   div.header a:link, a:visited {color: white}
   div.header a:hover {text-decoration: underline}
+
+  span.username { float:left; margin-left: 30px; font-size:15px; margin-top: 7px  }
 
 	h1 {font-size: 30px; color: LightGrey; font-weight: normal; clear: both; padding-top:50px}
 
@@ -31,7 +33,7 @@
   div.box-content { font-size: 15px; line-height: 25px; }
   div.box-content.got-fb-correct { color: green }
   div.box-content.got-fb-wrong { color: DarkRed }
-  
+
   span.example { }
   span.core_tok { font-weight: bold }
   span.coll_tok { font-weight: bold }
@@ -41,12 +43,16 @@
   button:hover { background-color: LightGrey }
   button.fb-useful { color: green; }
   button.fb-correct { color: LightGreen; }
-  button.fb-wrong { color: DarkRed; }  
+  button.fb-wrong { color: DarkRed; }
+
+  div.comments { font-size: 12px; color: grey }
+  span.user {font-weight: bold }
 
   </style>
-  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+    <script type="text/javascript">
+        var user_name = "$user_name"
 #raw
-  <script type="text/javascript">
 		function rate_collocation(_id, rating)
 		{
 			$.ajax({
@@ -66,10 +72,22 @@
 			});
 			$("#ex-" + _id).attr("class", "box-content got-fb-" + rating);
 		}
-  </script>
-#end raw
-</head>
 
+		function add_comment(_id, collocation, c)
+		{
+		    var c = prompt("ما هو تعليقك على المتواردة اللفظية '" + collocation + "'", c);
+		    $.ajax({
+				type: "POST",
+				url: "comment_collocation",
+				data: {"_id": _id, "comment": c}
+			});
+			$("#comment-" + _id + "-" + user_name)
+			.html('<span class="user">' + user_name + ':</span> ' + c);
+        }
+
+  </script>
+    #end raw
+</head>
 <body>
 <div class="header">
 مُرَيجَع
@@ -79,6 +97,10 @@
 </a>
 >
 $ar_pattern
+<span class="username">
+<a href="/login_page"><b>$user_name</b></a>
+</span>
+
 </div>
 
 <div class="content">
@@ -94,11 +116,20 @@ $f #echo " ".join(wp.partition("+")[0] for wp in $word.split(" "))
 #def render_coll_box($c)
 	#set $id = $c['_id']
 	#set $e_idx, $e = $next( ((n, e) for (n, e) in $enumerate($c.examples) if not $get_rating(e)), (None, None))
-	<div class="box">
+	#if "comments" not in $c:
+        #set $c["comments"] = {}
+    #end if
+    #if $user_name not in $c.comments:
+        #silent $c.comments[$user_name] = ""
+    #end if
+    #set $comment = $c.comments.get($user_name)
+
+    <div class="box">
 		<div class="box-title got-fb-$get_rating($c)" id="coll-$id">
-			<span class="collocation" title="$coll_tooltip($c)"> 
+			<span class="collocation" title="$coll_tooltip($c)">
 				$get_canonical_form($c)
                 <a href="candidate?_id=$id">&#x1f50d;</a>
+                <a href="javascript:add_comment('$id', '$get_canonical_form($c)', '$comment')">&#9997;</a>
 			</span>
 			<span class="coll-fb-buttons">
 				<button onclick="rate_collocation('$id', 'useful')" class="fb-useful">&#10004;&#10004;</button>
@@ -113,11 +144,23 @@ $f #echo " ".join(wp.partition("+")[0] for wp in $word.split(" "))
                     <button onclick="rate_example('$id', '$e_idx', 'correct')" class="fb-correct">&#10004;</button>
                     <button onclick="rate_example('$id', '$e_idx', 'wrong')" class="fb-wrong">&#10008;</button>
                 </span>
+                <div class="comments">
+                #for $user, $comment in $c.comments.items
+
+                    <p id="comment-$id-$user_name">
+                    #if $comment
+                        <span class="user">$user:</span>
+                        $comment
+                    #end if
+                    </p>
+                #end for
+                </div>
             </div>
         #end if
 	</div>
 #end def
 
+##set $candidates = sorted($candidates, key=lambda c: c["scores"]["log_likelihood"], reverse=True)
 #set $candidates = sorted($candidates, key=lambda c: c["freq"], reverse=True)
 
 <div class="coll_group">
@@ -140,5 +183,6 @@ $f #echo " ".join(wp.partition("+")[0] for wp in $word.split(" "))
 </div>
 
 </body>
+
 </html>
 

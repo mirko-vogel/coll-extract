@@ -77,7 +77,8 @@ class ReviewWebInterface(object):
         user_name = self.assure_logged_in()
         r = self.db.candidates.find({"core_lempos":core_lempos, "pattern": pattern})
         tmpl = file("templates/candidates_review.tmpl").read().decode("utf-8")
-        t = Template(tmpl, searchList = [{"candidates": r, "pattern": pattern, "core_lempos": core_lempos}])
+        t = Template(tmpl, searchList = [{"candidates": r, "pattern": pattern,
+                                          "core_lempos": core_lempos,  "user_name": user_name,}])
         return unicode(t).encode("utf8")
 
     @cherrypy.expose
@@ -99,6 +100,17 @@ class ReviewWebInterface(object):
         r2 = self.db.feedback.insert_one({"time": ctime(), "user": user_name, "collocation_id": _id,
                                           "type": "rate_collocation", "rating": rating})
 
+    @cherrypy.expose
+    def comment_collocation(self, _id, comment):
+        """
+
+        """
+        user_name = self.assure_logged_in()
+        path = u"comments.%s" % user_name
+        r = self.db.candidates.update_one({"_id": ObjectId(_id)},
+                                          {"$set": {path: comment}})
+        r2 = self.db.feedback.insert_one({"time": ctime(), "user": user_name, "collocation_id": _id,
+                                          "type": "comment_collocation", "comment": comment})
 
     @cherrypy.expose
     def rate_example(self, _id, e_idx, rating):
