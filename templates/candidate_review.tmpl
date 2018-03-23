@@ -123,6 +123,12 @@ $ar_pattern
         #for ($l, $freq) in $c.pattern_match_length_dist:
             $l كلمات ($freq) |
     	#end for
+        <b>
+            تقييم عالٍ للتوارد
+        </b> |
+        #for ($f, $score) in $c.scores.items:
+            $score ($f) |
+    	#end for
         </p>
         </div>
         <div class="examples">
