@@ -177,7 +177,7 @@ class CollocationCandidate(object):
         observed = (t["a"], t["b"], t["c"], t["d"])
 
         ll = 2 * sum(o * math.log(o/e) for (o, e) in zip(observed, expected)
-                     if 0 != 0)
+                     if o != 0)
         scores["log_likelihood"] = ll
 
         return scores
