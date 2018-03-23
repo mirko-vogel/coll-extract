@@ -4,6 +4,7 @@ Created on Mar 10, 2018
 
 @author: mirko
 '''
+import argparse
 from collections import defaultdict
 from time import ctime
 
@@ -112,5 +113,11 @@ class ReviewWebInterface(object):
                                           "type": "rate_example", "rating": rating})
     
 if __name__ == "__main__":
-    server = ReviewWebInterface(pymongo.MongoClient().candidates_v2)
+    p = argparse.ArgumentParser()
+    p.add_argument("--port", type=int, default=8080)
+    p.add_argument("--db-name", type=str, default="collocation_review")
+    args = p.parse_args()
+
+    cherrypy.config.update({"server.socket_port": args.port})
+    server = ReviewWebInterface(pymongo.MongoClient().get_database(args.db_name))
     cherrypy.quickstart(server, '/', "cherrypy.conf")
