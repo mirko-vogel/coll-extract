@@ -1,5 +1,5 @@
 #for $s in $examples:
-    #set $idx = $next(c for c in $s["collocations"] if c["pattern"] == $collocation["pattern"] and c["lemmas"] == $collocation["lemmas"])["idx"]
+    #set $idx = $next(c for c in $s["collocations"] if c["pattern"] == $collocation["pattern"] and c["lempos"] == $collocation["lempos"])["idx"]
     <p>
         #for ($n, $w) in $enumerate($s["words"])
             #if $n + 1 in $idx

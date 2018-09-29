@@ -1,6 +1,4 @@
 #import string
-#import urllib
-#set $word = $lempos.partition("+")[0]
 <html>
 <head>
   <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
@@ -116,7 +114,7 @@
 
 </div>
 
-<form action="search">
+<form action="show">
    البحث عن
   <input type="text" name="w" value="$word">
   <input type="submit" value="go">
@@ -124,59 +122,9 @@
 </div>
 
 <div class="content">
-    ##set patterns = [("V + noun", u"قعل + %s"), ("noun + V", u"%s + فعل"), ("v + NOUN", u"%s + اسم"), ("NOUN + v", u"اسم + %s"), ("NOUN + noun", u"اسم + %s"), ("noun + NOUN", u"%s + اسم"), ("NOUN + adj", u"اسم + %s"), ("noun + ADJ", u"%s + صفة") ]
-    #set patterns = ("v + SUBJ", "v + OBJ", "v + prep + OBJ", "noun + prep + NOUN", "NOUN + noun", "noun + NOUN")
-    #for ($pattern, $core_idx) in $collocations:
-        #set colls = $collocations[($pattern, $core_idx)]
-        #if $len($colls) == 0:
-            #continue
-        #end if
-
-        <div class="block">
-            <h1>
-                #set $components = [p.strip() for p in $pattern.split("+")]
-                #echo " + ".join(['<span class="core">%s</span>' % p  if n == $core_idx else p for (n, p) in enumerate($components)])
-                ##$pattern_name % ("<span class=core_word>" + $word + "</span>")
-            </h1>
-            <p><table class="sortable">
-                <thead><tr>
-                    <th>coll</th>
-                    <th class="sorttable_numeric">freq</th>
-                </tr></thead>
-                <tbody>
-                    #set $sorted_collocations = $sorted($colls, key=lambda x: -$len(x["instances"]))
-                    #for $c in $sorted_collocations:
-                        <tr>
-                        <td>
-                            #for $x in $c["lempos"]:
-                                #if $x == $lempos
-                                    #continue
-                                #end if
-                                <a href="show?lempos=$urllib.quote_plus($x.encode("utf-8"))">
-                                    #echo $x.partition("+")[0]
-                                </a>
-                            #end for
-                        </td>
-                        ##<td class="meta">
-                          ##echo "%.1f" % $score
-                        ##</td>
-                        <td class="meta">
-                            #set $coll_id=$c["_id"]
-                            <a href="#" onclick="show_examples('$coll_id')"> $len($c["instances"])</a>
-                        </td>
-                        </tr>
-                    #end for
-                </tbody>
-            </table></p>
-
-        </div>
-
-    #end for
-</div>
-
-<div class="examples-container">
-    أمثلة
-    <div class="examples" id="examples"></div>
+#for $d in $lempos:
+    echo $d
+#end for
 </div>
 
 <div class="credit">

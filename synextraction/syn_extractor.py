@@ -6,6 +6,7 @@ import codecs
 import logging
 from collections import Counter, defaultdict
 
+from pyarabic import araby
 import pymongo
 from pymongo import MongoClient
 from tqdm import tqdm
@@ -16,9 +17,7 @@ def get_collocations_from_sentence(t):
     """
     {
        pattern = "verb + prep + object"
-       verb = lemma of verb
-       prep = lemma of prep
-       object = lemma of object
+       lempos = [lempos_1, ...]
        idx = [pos_1, pos_2, pos_3]
     }
 
@@ -28,44 +27,55 @@ def get_collocations_from_sentence(t):
     """
     colls = []
     for n in iter_tree(t):
-        lemma, tag, rel, idx = n.data["lemma"], n.data["upostag"], n.data["deprel"], n.data["id"]
+        lempos = u"{lemma}+{upostag}".format(**n.data)
+        pos, rel, idx = n.data["upostag"], n.data["deprel"], n.data["id"]
 
         if not n.parent:  # a root
             continue
 
-        p_lemma, p_tag, p_idx = n.parent.data["lemma"], n.parent.data["upostag"], n.parent.data["id"]
+        p_lempos = u"{lemma}+{upostag}".format(**n.parent.data)
+        p_pos, p_idx = n.parent.data["upostag"], n.parent.data["id"]
         prep = next((c for c in n.children if c.data["upostag"] == "ADP"), None)
+        if prep:
+            prep_lempos = u"{lemma}+{upostag}".format(**prep.data)
+            prep_idx = prep.data["id"]
 
-        if rel == "nsubj" and p_tag == "VERB":
+        if rel == "nsubj" and p_pos == "VERB":
             colls.append({
-                "pattern": "verb + subject",
-                "lemmas": [p_lemma, lemma],
+                "pattern": u"فعل + فاعل",
+                "lempos": [p_lempos, lempos],
                 "idx": [p_idx, idx]
             })
-        elif rel == "obj" and p_tag == "VERB":
+        elif rel == "obj" and p_pos == "VERB":
             if prep:
                 colls.append({
-                    "pattern": "verb + prep + object",
-                    "lemmas": [p_lemma, prep.data["lemma"], lemma],
-                    "idx": [p_idx, prep.data["id"], idx]
+                    "pattern": u"فعل + حرف جر + مفعول به",
+                    "lempos": [p_lempos, prep_lempos, lempos],
+                    "idx": [p_idx, prep_idx, idx]
                 })
             else:
                 colls.append({
-                    "pattern": "verb + object",
-                    "lemmas": [p_lemma, lemma],
+                    "pattern": u"فعل + مفعول به",
+                    "lempos": [p_lempos, lempos],
                     "idx": [p_idx, idx]
                 })
-        if rel == "nmod" and p_tag == "NOUN":
+        if rel == "nmod" and p_pos == "NOUN":
             if prep:
                 colls.append({
-                    "pattern": "noun + prep + noun2",
-                    "lemmas": [p_lemma, prep.data["lemma"], lemma],
-                    "idx": [p_idx, prep.data["id"], idx]
+                    "pattern": u"اسم + حرف جر + اسم",
+                    "lempos": [p_lempos, prep_lempos, lempos],
+                    "idx": [p_idx, prep_idx, idx]
                 })
             else:
                 colls.append({
-                    "pattern": "mudaf_ileh + mudaf",
-                    "lemmas": [p_lemma, lemma],
+                    "pattern": u"مضاف إليه + مضاف",
+                    "lempos": [p_lempos, lempos],
+                    "idx": [p_idx, idx]
+                })
+        if rel == "amod" and p_pos == "NOUN":
+                colls.append({
+                    "pattern": u"اسم + صفة",
+                    "lempos": [p_lempos, lempos],
                     "idx": [p_idx, idx]
                 })
 
@@ -103,13 +113,22 @@ if __name__ == "__main__":
     logging.info("Connecting to MongoDB (%s, %s).", args.db_url, args.db_name)
     db = MongoClient(args.db_url).get_database(args.db_name)
     sentences = db.get_collection("sentences")
+
+    lemmas = db.get_collection("lemmas")
+    # index for counting
+    lemmas.create_index([("lemma", pymongo.ASCENDING), ("pos", pymongo.ASCENDING)], unique=True)
+    # index for retrieving
+    lemmas.create_index("unvocalized_lemma")
+
     collocations = db.get_collection("collocations")
     # Index for counting collocations
-    collocations.create_index([("pattern", pymongo.ASCENDING), ("lemma", pymongo.ASCENDING)], unique=True)
+    collocations.create_index("lempos_string", unique=True)
     # Index for retrieving collocations
-    collocations.create_index("lemmas")
+    collocations.create_index("lempos")
 
     logging.info("Importing corpus %s into db ...", args.corpus)
+    lemma_counts = defaultdict(int)  # Accumulate before writing to db, otherwise too slow
+
     with codecs.open(args.corpus, encoding="utf-8") as f:
         for (idx, t) in tqdm(enumerate(read_conllu(f))):
             # The conllu lib is seriously bullshit ...
@@ -122,11 +141,19 @@ if __name__ == "__main__":
                 "collocations": get_collocations_from_sentence(t)
             }
             _id = sentences.insert_one(s).inserted_id
+
+            for n in nodes:
+                lemma_counts[(n["lemma"], n["upostag"])] += 1
+
             for c in s["collocations"]:
                 # FIXME: Very bad design?!
-                collocations.update_one({"pattern": c["pattern"], "lemma": " ".join(c["lemmas"])},
-                                        {"$push": {"instances": _id}, "$set": { "lemmas": c["lemmas"] } },
+                collocations.update_one({"lempos_string": " ".join(c["lempos"])},
+                                        {"$push": {"instances": _id},
+                                         "$set": { "lempos": c["lempos"], "pattern": c["pattern"] } },
                                         upsert=True)
+
+    lemmas.insert({"lemma": lemma, "pos": pos, "freq": n, "unvocalized_lemma": araby.strip_tashkeel(lemma)}
+                  for (lemma, pos), n in lemma_counts.iteritems())
 
     # result = []
     # e = PatternExtractor(args.corpus.name, p)
