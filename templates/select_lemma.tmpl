@@ -1,4 +1,5 @@
 #import string
+#import urllib
 <html>
 <head>
   <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
@@ -114,7 +115,7 @@
 
 </div>
 
-<form action="show">
+<form action="search">
    البحث عن
   <input type="text" name="w" value="$word">
   <input type="submit" value="go">
@@ -123,7 +124,10 @@
 
 <div class="content">
 #for $d in $lempos:
-    echo $d
+    #set $params = $urllib.urlencode({"lempos": u"{lemma}+{pos}".format(**$d).encode("utf-8")})
+    <p><a href="show?$params">
+        $d.lemma ($d.pos)
+    </a></p>
 #end for
 </div>
 
