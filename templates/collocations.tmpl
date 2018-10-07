@@ -1,10 +1,10 @@
 #import string
 #import urllib
-#set $word = $lempos.partition("+")[0]
+#set $words = " ".join(lp.partition("+")[0] for lp in $lempos)
 <html>
 <head>
   <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
-  <title>Displaying entry $word</title>
+  <title>Displaying entry $words</title>
   <style>
   body { direction: rtl; margin: 0px; width: 100%; font-size: 30px}
   input { font-size: 22px ; border: 0px; border-bottom: 1px solid white; background: black; color: white}
@@ -41,19 +41,19 @@
   div.external_data a:link, div.external_data a:visited {color: grey}
   div.provider_name {margin-top: 0px; margin-bottom: 0px; font-size:16px}
   div.provider_content {margin-top: 0px; margin-bottom: 5px; }
-	
+
   form { padding: 10px}
   div.credit { position: fixed; bottom: 10; left: 10;	font-size: 20px }
   div.credit a {color: grey}
 
   ul {margin-top: 5px}
   li {margin-top: 5px}
-  
+
   #table.collocations {width: 100%; font-size: 20px}
   #table.collocations td.meta { color: grey}
   span.core_word { color: black; font-weight: normal }
 
-  #title 
+  #title
   {
     margin-right: 10px;
     color: white;
@@ -118,7 +118,7 @@
 
 <form action="search">
    البحث عن
-  <input type="text" name="w" value="$word">
+  <input type="text" name="w" value="$words">
   <input type="submit" value="go">
 </form>
 </div>
@@ -126,8 +126,8 @@
 <div class="content">
     ##set patterns = [("V + noun", u"قعل + %s"), ("noun + V", u"%s + فعل"), ("v + NOUN", u"%s + اسم"), ("NOUN + v", u"اسم + %s"), ("NOUN + noun", u"اسم + %s"), ("noun + NOUN", u"%s + اسم"), ("NOUN + adj", u"اسم + %s"), ("noun + ADJ", u"%s + صفة") ]
     #set patterns = ("v + SUBJ", "v + OBJ", "v + prep + OBJ", "noun + prep + NOUN", "NOUN + noun", "noun + NOUN")
-    #for ($pattern, $core_idx) in $collocations:
-        #set colls = $collocations[($pattern, $core_idx)]
+    #for ($pattern, $core_indexes) in $collocations:
+        #set colls = $collocations[($pattern, $core_indexes)]
         #if $len($colls) == 0:
             #continue
         #end if
@@ -135,7 +135,7 @@
         <div class="block">
             <h1>
                 #set $components = [p.strip() for p in $pattern.split("+")]
-                #echo " + ".join(['<span class="core">%s</span>' % p  if n == $core_idx else p for (n, p) in enumerate($components)])
+                #echo " + ".join(['<span class="core">%s</span>' % p  if n in $core_indexes else p for (n, p) in enumerate($components)])
                 ##$pattern_name % ("<span class=core_word>" + $word + "</span>")
             </h1>
             <p><table class="sortable">
@@ -148,14 +148,12 @@
                     #for $c in $sorted_collocations:
                         <tr>
                         <td>
-                            #for $x in $c["lempos"]:
-                                #if $x == $lempos
-                                    #continue
-                                #end if
-                                <a href="show?lempos=$urllib.quote_plus($x.encode("utf-8"))">
-                                    #echo $x.partition("+")[0]
-                                </a>
-                            #end for
+                            #set $coll_lempos = [x for (n, x) in $enumerate($c["lempos"]) if n not in $core_indexes]
+                            #set $coll_lemma = " ".join(x.partition("+")[0] for x in coll_lempos)
+                            #set $params = $urllib.urlencode({"lempos": " ".join($coll_lempos).encode("utf-8")})
+                            <a href="show?$params">
+                            #echo $coll_lemma
+                            </a>
                         </td>
                         ##<td class="meta">
                           ##echo "%.1f" % $score
