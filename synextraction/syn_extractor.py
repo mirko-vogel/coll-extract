@@ -33,6 +33,10 @@ def get_collocations_from_sentence(t):
         if not n.parent:  # a root
             continue
 
+        # Filter:
+        # - Max dist between constituents
+        # - only _words_
+
         p_lempos = u"{lemma}+{upostag}".format(**n.parent.data)
         p_pos, p_idx = n.parent.data["upostag"], n.parent.data["id"]
         prep = next((c for c in n.children if c.data["upostag"] == "ADP"), None)
