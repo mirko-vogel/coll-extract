@@ -1,0 +1,1 @@
+../../farasa_tools/inject-lempos-into-conllu.py
