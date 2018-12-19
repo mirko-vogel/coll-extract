@@ -151,9 +151,9 @@ if __name__ == "__main__":
 
             for c in s["collocations"]:
                 # FIXME: Very bad design?!
-                collocations.update_one({"lempos_string": " ".join(c["lempos"])},
+                collocations.update_one({"lempos_string": " ".join(c["lempos"]), "pattern": c["pattern"]},
                                         {"$push": {"instances": _id},
-                                         "$set": { "lempos": c["lempos"], "pattern": c["pattern"] } },
+                                         "$set": { "lempos": c["lempos"]} },
                                         upsert=True)
 
     lemmas.insert({"lemma": lemma, "pos": pos, "freq": n, "unvocalized_lemma": araby.strip_tashkeel(lemma)}
