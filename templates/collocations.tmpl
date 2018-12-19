@@ -124,8 +124,20 @@
 </div>
 
 <div class="content">
-    ##set patterns = [("V + noun", u"قعل + %s"), ("noun + V", u"%s + فعل"), ("v + NOUN", u"%s + اسم"), ("NOUN + v", u"اسم + %s"), ("NOUN + noun", u"اسم + %s"), ("noun + NOUN", u"%s + اسم"), ("NOUN + adj", u"اسم + %s"), ("noun + ADJ", u"%s + صفة") ]
-    #set patterns = ("v + SUBJ", "v + OBJ", "v + prep + OBJ", "noun + prep + NOUN", "NOUN + noun", "noun + NOUN")
+    <div class="block">
+        <h1>
+            معلومات عامة
+        </h1>
+        #for $lp, $f in zip($lempos, $lempos_freqs):
+            <p>
+                تردد
+                #echo $lp.split("+")[0]
+                : $f
+            </p>
+        #end for
+
+    </div>
+
     #for ($pattern, $core_indexes) in $collocations:
         #set colls = $collocations[($pattern, $core_indexes)]
         #if $len($colls) == 0:
@@ -136,7 +148,8 @@
             <h1>
                 #set $components = [p.strip() for p in $pattern.split("+")]
                 #echo " + ".join(['<span class="core">%s</span>' % p  if n in $core_indexes else p for (n, p) in enumerate($components)])
-                ##$pattern_name % ("<span class=core_word>" + $word + "</span>")
+                #set params = $urllib.urlencode({"lempos": " ".join($lempos).encode("utf-8"), "pattern": $pattern.encode("utf-8"), "core_indexes": ",".join(str(x) for x in $core_indexes)})
+                <a href="group_collocations?$params">*</a>
             </h1>
             <p><table class="sortable">
                 <thead><tr>
@@ -144,7 +157,8 @@
                     <th class="sorttable_numeric">freq</th>
                 </tr></thead>
                 <tbody>
-                    #set $sorted_collocations = $sorted($colls, key=lambda x: -$len(x["instances"]))
+                    ## Hard-coded cut, return only 100 collocation
+                    #set $sorted_collocations = $sorted($colls, key=lambda x: -$len(x["instances"]))[:100]
                     #for $c in $sorted_collocations:
                         <tr>
                         <td>
